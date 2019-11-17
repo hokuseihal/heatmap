@@ -18,7 +18,7 @@ class TrialModel(nn.Module):
     def __init__(self):
         super(TrialModel, self).__init__()
         self.cnn1 = nn.Conv2d(3, 8, 44)
-        self.cnn2 = nn.Conv2d(8,16 , 44)
+        self.cnn2 = nn.Conv2d(8, 16, 44)
         self.cnn3 = nn.Conv2d(16, 32, 42)
         self.fc = nn.Linear(32, 2)
 
@@ -30,7 +30,7 @@ class TrialModel(nn.Module):
         x = F.relu(x)
         x = self.cnn3(x)
         x = F.relu(x)
-        x = x.view(s[0],-1)
+        x = x.view(s[0], -1)
         x = self.fc(x)
         x = F.softmax(x, dim=-1)
         return x
@@ -58,21 +58,28 @@ class PatchModel(nn.Module):
 class ClassModel(nn.Module):
     def __init__(self):
         super(ClassModel, self).__init__()
-        self.patchmodel = patchmodel.cnn
+        self.patchmodel = PatchModel()
         self.fc = nn.Linear(1000, 8 * 2)
+        self.cnn1 = nn.Conv2d(2, 6, 3, 1, 1)
 
     def forward(self, x):
-        with torch.no_grad():
-            s = x.shape()
-            x = x.view(-1.0 * s[-3:])
-            x = self.patchmodel(x)
-        x = self.fc(x)
-        x = x.view(*s[:-3])
+        s = x.shape
+        # (N,Ws,Hs,C,H,W)
+        x = x.view(-1, *s[-3:])
+        # (N*Ws*Hs,C,H,W)
+        x = self.patchmodel(x)
+        # (N*Ws*Hs,2)
+        x = x.view(*s[:3], 2)
+        # (N,Ws,Hs,2)
+        x = x.permute(0, 3, 2, 1)
+        # (N,2,Hs,Ws)
+        x = self.cnn1(x)
+        # (N,Ws,Hs,Cls)
         return x
 
 
 # load data
-batchsize = 32
+batchsize = 8
 num_epoch = 16
 rdd = RDPD(rddbase="All/", patchbase="rdd_patch/", split=(6, 6))
 pd = PD("rdd_patch/")
@@ -83,7 +90,9 @@ train_pd, test_pd = torch.utils.data.random_split(
     pd, [int(len(pd) * 0.7), len(pd) - int(len(pd) * 0.7)]
 )
 
-train_rdd_loader = torch.utils.data.DataLoader(train_rdd, batch_size=1, shuffle=True)
+train_rdd_loader = torch.utils.data.DataLoader(
+    train_rdd, batch_size=batchsize, shuffle=True
+)
 test_rdd_loader = torch.utils.data.DataLoader(
     test_rdd, batch_size=batchsize, shuffle=True
 )
@@ -100,7 +109,7 @@ test_non_crack_pd_loader = torch.utils.data.DataLoader(
 # finetuning
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
-patchmodel = PatchModel().to(device)
+patchmodel = ClassModel().to(device)
 optimizer = torch.optim.Adam(patchmodel.parameters())
 patchlossf = F.cross_entropy
 
@@ -109,14 +118,14 @@ def patchaccf(target, pred):
     return pred.eq(target.view_as(pred.long())).sum().item()
 
 
-rdclossf = F.binary_cross_entropy_with_logits
+rdclossf = F.mse_loss
 # rdclossf=#TODO how ?
 
-for e in range(3):
-    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
-    train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
-    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
-    test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
+# for e in range(3):
+#    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
+#    train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
+#    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
+#    test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
 # RDD train
 for e in range(num_epoch):
     train(patchmodel, device, train_rdd_loader, rdclossf, optimizer, e)

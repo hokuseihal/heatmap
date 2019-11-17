@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
 
-#TODO from  w_d to ws
 class PIL2Tail(object):
     def __init__(self, w_s, h_s, r="numpy"):
         self.w_s = w_s
@@ -35,10 +34,10 @@ def train(model, device, train_loader, lossf, optimizer, epoch, log_interval=1):
     model.train()
     tloss = 0
     for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)
+        data, target = data.to(device,dtype=torch.float32), target.to(device)
         optimizer.zero_grad()
         output = model(data)
-        loss = lossf(output, target.long())
+        loss = lossf(output, target)
         loss.backward()
         optimizer.step()
         tloss = tloss + loss.item()
@@ -66,7 +65,7 @@ def test(model, device, test_loader, lossf, accf):
             data, target = data.to(device), target.to(device)
             output = model(data)
             # sum up batch loss
-            test_loss += lossf(output, target.long()).item()
+            test_loss += lossf(output, target).item()
             # get the index of the max log-probability
             pred = output.argmax(dim=-1, keepdim=True)
             correct += accf(target, pred)
