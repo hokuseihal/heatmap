@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
 
@@ -43,7 +42,7 @@ def train(model, device, train_loader, lossf, optimizer, epoch, log_interval=1):
         loss.backward()
         optimizer.step()
         tloss = tloss + loss.item()
-        if batch_idx % log_interval == 0 and batch_idx != 0:
+        if (batch_idx+1) % log_interval == 0:
             print(
                 "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
                     epoch,

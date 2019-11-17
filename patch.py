@@ -17,10 +17,10 @@ from dataset import RoadDamagePatchDataset as RDPD
 class TrialModel(nn.Module):
     def __init__(self):
         super(TrialModel, self).__init__()
-        self.cnn1 = nn.Conv2d(3, 32, 44)
-        self.cnn2 = nn.Conv2d(32, 64, 44)
-        self.cnn3 = nn.Conv2d(64, 128, 42)
-        self.fc = nn.Linear(128, 2)
+        self.cnn1 = nn.Conv2d(3, 8, 44)
+        self.cnn2 = nn.Conv2d(8,16 , 44)
+        self.cnn3 = nn.Conv2d(16, 32, 42)
+        self.fc = nn.Linear(32, 2)
 
     def forward(self, x):
         s = x.shape
@@ -88,7 +88,7 @@ test_rdd_loader = torch.utils.data.DataLoader(
     test_rdd, batch_size=batchsize, shuffle=True
 )
 train_pd_loader = torch.utils.data.DataLoader(
-    train_pd, batch_size=batchsize, shuffle=True
+    train_pd, batch_size=batchsize, shuffle=False
 )
 test_pd_loader = torch.utils.data.DataLoader(
     test_pd, batch_size=batchsize, shuffle=True
@@ -100,7 +100,7 @@ test_non_crack_pd_loader = torch.utils.data.DataLoader(
 # finetuning
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
-patchmodel = TrialModel().to(device)
+patchmodel = PatchModel().to(device)
 optimizer = torch.optim.Adam(patchmodel.parameters())
 patchlossf = F.cross_entropy
 
@@ -112,7 +112,8 @@ def patchaccf(target, pred):
 rdclossf = F.binary_cross_entropy_with_logits
 # rdclossf=#TODO how ?
 
-for e in range(1):
+for e in range(3):
+    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
     train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
     test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
     test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
