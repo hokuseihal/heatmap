@@ -66,7 +66,7 @@ class PatchDataset(torch.utils.data.Dataset):
         self.negative_road_base = base + "Negative_road/"
         if non_crack:
             self.imagelist = [
-                (self.negative_road_base + path, np.float32(0))
+                (self.negative_road_base + path, 0)
                 for path in sorted(os.listdir(self.negative_road_base))[
                     int(ratio * len(os.listdir(self.negative_road_base))):
                     ]
@@ -75,17 +75,17 @@ class PatchDataset(torch.utils.data.Dataset):
         else:
             self.imagelist = (
                 [
-                    (self.positive_base + path, np.float32(1))
+                    (self.positive_base + path, 1)
                     for path in os.listdir(self.positive_base)
                 ]
                 + [
-                    (self.negative_base + path, np.float32(0))
+                    (self.negative_base + path, 0)
                     for path in sorted(os.listdir(self.negative_base))[
                         : int((1 - ratio) * len(os.listdir(self.positive_base)))
                     ]
                 ]
                 + [
-                    (self.negative_road_base + path, np.float32(0))
+                    (self.negative_road_base + path, 0)
                     for path in os.listdir(self.negative_road_base)[
                         : int(ratio * len(os.listdir(self.negative_road_base)))
                     ]

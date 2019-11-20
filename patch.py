@@ -75,11 +75,11 @@ class ClassModel(nn.Module):
         # (N,2,Hs,Ws)
         x = self.cnn1(x)
         # (N,Ws,Hs,Cls)
-        return x
+        return (x + 1) / 2
 
 
 # load data
-batchsize = 8
+batchsize = 16
 num_epoch = 16
 rdd = RDPD(rddbase="All/", patchbase="rdd_patch/", split=(6, 6))
 pd = PD("rdd_patch/")
@@ -109,7 +109,7 @@ test_non_crack_pd_loader = torch.utils.data.DataLoader(
 # finetuning
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
-patchmodel = ClassModel().to(device)
+patchmodel = PatchModel().to(device)
 optimizer = torch.optim.Adam(patchmodel.parameters())
 patchlossf = F.cross_entropy
 
@@ -118,15 +118,32 @@ def patchaccf(target, pred):
     return pred.eq(target.view_as(pred.long())).sum().item()
 
 
-rdclossf = F.mse_loss
-# rdclossf=#TODO how ?
+def rdcaccf(target, pred, limit=0.5):
+    tp = target.bool() & (pred > limit)
+    fp = (~target.bool()) & (pred > limit)
+    tn = target.bool() & ~(pred > limit)
+    fn = ~target.bool() & ~(pred > limit)
 
-# for e in range(3):
-#    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
-#    train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
-#    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
-#    test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
-# RDD train
-for e in range(num_epoch):
-    train(patchmodel, device, train_rdd_loader, rdclossf, optimizer, e)
-    test(patchmodel, device, test_rdd_loader, rdclossf, rdcaccf)
+    return torch.stack(
+        [
+            tp.view(-1, tp.shape[-1]).sum(0),
+            fp.view(-1, fp.shape[-1]).sum(0),
+            tn.view(-1, tn.shape[-1]).sum(0),
+            fn.view(-1, fn.shape[-1]).sum(0),
+        ]
+    )
+
+
+rdclossf = F.mse_loss
+if __name__ == "__main__":
+
+    for e in range(3):
+        test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
+        train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
+        test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
+        test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
+    # RDD train
+
+    for e in range(num_epoch):
+        train(patchmodel, device, train_rdd_loader, rdclossf, optimizer, e)
+        test(patchmodel, device, test_rdd_loader, rdclossf, rdcaccf, mode="tp_fp_tn_fn")
