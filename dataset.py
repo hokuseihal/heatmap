@@ -68,9 +68,8 @@ class PatchDataset(torch.utils.data.Dataset):
             self.imagelist = [
                 (self.negative_road_base + path, 0)
                 for path in sorted(os.listdir(self.negative_road_base))[
-                    int(ratio * len(os.listdir(self.negative_road_base))):
-                    ]
-
+                    int(ratio * len(os.listdir(self.negative_road_base))) :
+                ]
             ]
         else:
             self.imagelist = (
@@ -164,13 +163,22 @@ def isinbox(pos, sp, b):
 
 
 def pos2posvec(base, imp, pos, sp):
-    # get cls data like above -> functionalize?
     basename = imp.split(".")[0]
     bb = getbb(basename, xmlbase=base + "Annotations/")
     r_tensor = torch.zeros(num_cls)
     for cls, b in bb:
         r_tensor[cls] = 1.0 if isinbox(pos, sp, b) else 0.0
     return r_tensor
+
+
+def pos2cls_cof(base, imp, pos, sp):
+    #TODO debug
+    basename = imp.split(".")[0]
+    bb = getbb(basename, xmlbase=base + "Annotations/")
+    # TODO -1 is none class
+    for cls, b in bb:
+        r = torch.Tensor([cls, 1.0]) if isinbox(pos, sp, b) else torch.Tensor([-1, 0.0])
+    return r
 
 
 def num2postuple(num, sp):
@@ -181,10 +189,12 @@ class RoadDamagePatchDataset(torch.utils.data.Dataset):
     def __init__(self, rddbase, patchbase, split, transforms=None):
         assert isinstance(split, tuple), "argment sp's type must be TUPLE."
         assert len(split) == 2, "argment sp's length must be 2."
-        self.rddbase=rddbase
-        self.patchbase=patchbase
+        self.rddbase = rddbase
+        self.patchbase = patchbase
         self.transforms = (
-            Compose([Resize((768,768)),PIL2Tail(*split, "torch")]) if transforms is None else transforms
+            Compose([Resize((768, 768)), PIL2Tail(*split, "torch")])
+            if transforms is None
+            else transforms
         )
         self.namelist = []
         self.num_cls = num_cls
@@ -194,14 +204,14 @@ class RoadDamagePatchDataset(torch.utils.data.Dataset):
                 num, basename = split_head_num(imp)
                 if basename not in self.namelist:
                     self.namelist.append(basename)
-        self.targetl = torch.zeros((len(self.namelist), *split, self.num_cls))
+        self.targetl = torch.zeros((len(self.namelist), *split, 2))
 
         # on each num ,get bbox info and restore if patch is positive
         for imp in os.listdir(patchbase + "Positive"):
             num, basename = split_head_num(imp)
             self.targetl[
                 (self.namelist.index(basename), *num2postuple(num, split))
-            ] = pos2posvec(rddbase, basename, num, split)
+            ] = pos2cls_cof(rddbase, basename, num, split)
 
     def __len__(self):
         return len(self.namelist)
@@ -209,4 +219,4 @@ class RoadDamagePatchDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         # return shape : tensor(Ws,Hs,C)
         im = Image.open(self.rddbase + "JPEGImages/" + self.namelist[idx] + ".jpg")
-        return self.transforms(im), self.targetl[idx,:,:,:6]
+        return self.transforms(im), self.targetl[idx, :, :]

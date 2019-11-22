@@ -76,6 +76,8 @@ class ClassModel(nn.Module):
         x = self.cnn1(x)
         # (N,Ws,Hs,Cls)
         return (x + 1) / 2
+        
+        # (N,Ws,Hs,Cls,conf)
 
 
 # load data
