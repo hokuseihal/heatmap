@@ -17,7 +17,7 @@ for i in os.listdir(imageroot):
         )
         #convimg = kmeans(img,boxes)
         #dimg = del_trimming(convimg, boxes)
-        if not putboxes(boxes, img,5):
+        if not putboxes(boxes, img):
             continue
         print()
         fig = plt.figure(figsize=(10, 5))
