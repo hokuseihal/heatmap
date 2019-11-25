@@ -78,7 +78,6 @@ class ClassModel(nn.Module):
         return (x + 1) / 2
         
         # (N,Ws,Hs,Cls,conf)
-
 # load data
 batchsize = 16
 num_epoch = 16
@@ -112,7 +111,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 patchmodel = PatchModel().to(device)
 optimizer = torch.optim.Adam(patchmodel.parameters())
-patchlossf = F.cross_entropy
+patchlossf = nn.CrossEntropyLoss()
 
 
 def patchaccf(target, pred):
@@ -136,7 +135,7 @@ def rdcaccf(target, pred, limit=0.5):
 
 
 rdclossf = F.mse_loss
-for e in range(8):
+for e in range(4):
     test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
     train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
     test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
