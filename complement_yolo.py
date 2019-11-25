@@ -3,6 +3,7 @@ from core import PIL2Tail
 from PIL import Image
 import torch
 import torch.nn.functional as F
+from  patch import PatchModel
 
 
 def round_sp(cor, s, m):
