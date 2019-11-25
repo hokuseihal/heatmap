@@ -1,6 +1,6 @@
 import patch
 import csv
-from core import split2Tensor
+from core import PIL2Tail
 from PIL import Image
 import torch
 import torch.nn.functional as F
@@ -15,7 +15,7 @@ def round_sp(cor, s, m):
 with open("result.csv") as cf:
     reader = csv.reader(cf)
     csvl = [row for row in reader]
-s2t = split2Tensor(6, 6, "torch")
+s2t = PIL2Tail(6, 6, "torch")
 #   for img in csv.row
 pre = ""
 NAME = 0

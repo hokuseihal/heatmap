@@ -135,8 +135,7 @@ def rdcaccf(target, pred, limit=0.5):
 
 
 rdclossf = F.mse_loss
-if __name__ == "__main__":
-
+def main():
     for e in range(8):
         test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
         train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
@@ -148,3 +147,7 @@ if __name__ == "__main__":
     for e in range(num_epoch):
         train(patchmodel, device, train_rdd_loader, rdclossf, optimizer, e)
         test(patchmodel, device, test_rdd_loader, rdclossf, rdcaccf, mode="tp_fp_tn_fn")
+
+
+
+main()
