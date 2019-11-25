@@ -137,12 +137,13 @@ def rdcaccf(target, pred, limit=0.5):
 rdclossf = F.mse_loss
 if __name__ == "__main__":
 
-    for e in range(3):
+    for e in range(8):
         test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
         train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
         test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
         test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
     # RDD train
+    torch.save(patchmodel,'patchmodel.pth')
 
     for e in range(num_epoch):
         train(patchmodel, device, train_rdd_loader, rdclossf, optimizer, e)
