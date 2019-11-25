@@ -1,4 +1,3 @@
-import patch
 import csv
 from core import PIL2Tail
 from PIL import Image
