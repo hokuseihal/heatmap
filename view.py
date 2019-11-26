@@ -10,16 +10,17 @@ from mein import putboxes, del_trimming, canny, kmeans, Aspect
 import torch
 from patch import PatchModel
 import torch.nn.functional as F
+from loadimg import loadimgsp
 root = os.environ["HOME"] + "/src/RoadDamageDataset/All/"
 labelroot = root + "labels/"
 imageroot = root + "JPEGImages/"
-#pmodel = torch.load("patchmodel.pth", "cpu")
+pmodel = torch.load("patchmodel.pth", "cpu")
 from patch import patchmodel
 pmodel=patchmodel.to('cpu')
 patch = True
 for i in os.listdir(imageroot):
     try:
-        img = cv2.imread(imageroot + i)
+        img = cv2.imread("All/JPEGImages/Adachi_20170907134630.jpg")
         img=cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
         assert img.any()
         boxes = np.loadtxt(
@@ -35,11 +36,9 @@ for i in os.listdir(imageroot):
         ax1.imshow(img)
         ax2 = fig.add_subplot(1, 2, 2)
         if patch:
-            pimg = Image.open(imageroot + i)
+            pimg = Image.open("All/JPEGImages/Adachi_20170907134630.jpg")
             draw = ImageDraw.Draw(pimg)
-            img = Resize((768, 768))(pimg)
-            img = PIL2Tail(6, 6, "torch")(img)
-            img=img.reshape(-1, 3, 128, 128).float()
+            img = loadimgsp("All/JPEGImages/Adachi_20170907134630.jpg")
             out = pmodel(img)
             heatmap = F.softmax(out, dim=-1)
             heatmap=heatmap.reshape(6, 6, 2)

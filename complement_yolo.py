@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from patch import PatchModel
 from patch import patchmodel
 from torchvision.transforms import Resize, Compose
-
+from loadimg import loadimgsp
 
 def round_sp(cor, s, m):
     return int(cor * s / m)
@@ -18,7 +18,6 @@ def round_sp(cor, s, m):
 with open("y2rresult_001.csv") as cf:
     reader = csv.reader(cf)
     csvl = [row for row in reader]
-s2t = PIL2Tail(6, 6, "torch")
 #   for img in csv.row
 pre = ""
 NAME = 0
@@ -38,10 +37,7 @@ for row in csvl:
     print(row[NAME])
     #       if different:heatmap=model(img)
     if not pre == row[NAME]:
-        img = Image.open(row[NAME])
-        assert img
-        img = Resize((768, 768))(img)
-        img = s2t(img).reshape(-1, 3, 128, 128).float()
+        img = loadimgsp
         out=model(img)
         heatmap=F.softmax(out,dim=-1)
         heatmap=heatmap.reshape(6,6,2)

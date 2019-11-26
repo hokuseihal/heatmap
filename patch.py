@@ -97,7 +97,7 @@ test_rdd_loader = torch.utils.data.DataLoader(
     test_rdd, batch_size=batchsize, shuffle=True
 )
 train_pd_loader = torch.utils.data.DataLoader(
-    train_pd, batch_size=batchsize, shuffle=False
+    train_pd, batch_size=batchsize, shuffle=True
 )
 test_pd_loader = torch.utils.data.DataLoader(
     test_pd, batch_size=batchsize, shuffle=True
@@ -133,15 +133,15 @@ def rdcaccf(target, pred, limit=0.5):
         ]
     )
 
-
-rdclossf = F.mse_loss
-for e in range(4):
-    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
-    train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
-    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
-    test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
-# RDD train
-torch.save(patchmodel,'patchmodel.pth')
+if __name__=='__main__':
+    rdclossf = F.mse_loss
+    for e in range(4):
+        test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
+        train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
+        test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
+        test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
+    # RDD train
+    torch.save(patchmodel,'patchmodel.pth')
     #for e in range(num_epoch):
     #    train(patchmodel, device, train_rdd_loader, rdclossf, optimizer, e)
     #    test(patchmodel, device, test_rdd_loader, rdclossf, rdcaccf, mode="tp_fp_tn_fn")
