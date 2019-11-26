@@ -78,13 +78,13 @@ class PatchDataset(torch.utils.data.Dataset):
                 ]
                 + [
                     (self.negative_base + path, 0)
-                    for path in sorted(os.listdir(self.negative_base))[
+                    for path in (os.listdir(self.negative_base))[
                         : int((1 - ratio) * len(os.listdir(self.positive_base)))
                     ]
                 ]
                 + [
                     (self.negative_road_base + path, 0)
-                    for path in os.listdir(self.negative_road_base)[
+                    for path in sorted(os.listdir(self.negative_road_base))[
                         : int(ratio * len(os.listdir(self.negative_road_base)))
                     ]
                 ]

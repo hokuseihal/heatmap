@@ -43,8 +43,7 @@ class PatchModel(nn.Module):
         self.fc = nn.Linear(1000, 2)
 
     def forward(self, x):
-        with torch.no_grad():
-            x = self.cnn(x)
+        x = self.cnn(x)
         x = self.fc(x)
         return x
 
@@ -79,7 +78,7 @@ class ClassModel(nn.Module):
         
         # (N,Ws,Hs,Cls,conf)
 # load data
-batchsize = 16
+batchsize = 32
 num_epoch = 16
 rdd = RDPD(rddbase="All/", patchbase="rdd_patch/", split=(6, 6))
 pd = PD("rdd_patch/")
@@ -132,16 +131,15 @@ def rdcaccf(target, pred, limit=0.5):
             fn.view(-1, fn.shape[-1]).sum(0),
         ]
     )
-
-if __name__=='__main__':
+def main():
     rdclossf = F.mse_loss
-    for e in range(4):
+    for e in range(16):
         test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
         train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
         test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
         test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
-    # RDD train
+# RDD train
     torch.save(patchmodel,'patchmodel.pth')
     #for e in range(num_epoch):
-    #    train(patchmodel, device, train_rdd_loader, rdclossf, optimizer, e)
-    #    test(patchmodel, device, test_rdd_loader, rdclossf, rdcaccf, mode="tp_fp_tn_fn")
+        #    train(patchmodel, device, train_rdd_loader, rdclossf, optimizer, e)
+        #    test(patchmodel, device, test_rdd_loader, rdclossf, rdcaccf, mode="tp_fp_tn_fn")
