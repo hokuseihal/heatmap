@@ -61,11 +61,10 @@ def test(model, device, test_loader, lossf, accf, mode="correct"):
     model.eval()
     test_loss = 0
     correct = 0
-    tp_fp_tn_fn = torch.zeros(4,6)
+    tp_fp_tn_fn = torch.zeros(4, 6)
     with torch.no_grad():
         for data, target in test_loader:
-            data, target = data.to(
-                device, dtype=torch.float32), target.to(device)
+            data, target = data.to(device, dtype=torch.float32), target.to(device)
             output = model(data)
             # sum up batch loss
             test_loss += lossf(output, target).item()
@@ -78,17 +77,19 @@ def test(model, device, test_loader, lossf, accf, mode="correct"):
             else:
                 assert False, "Set correct mode"
 
-    if mode == 'correct':
+    if mode == "correct":
         print(
             "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
-                test_loss,
+                test_loss/len(test_loader),
                 correct,
                 len(test_loader.dataset),
-                100.0 * correct/len(test_loader.dataset),
+                100.0 * correct / len(test_loader.dataset),
             )
         )
-    elif mode == 'tp_fp_tn_fn':
+    elif mode == "tp_fp_tn_fn":
         tp, fp, tn, fn = tp_fp_tn_fn
-        print(f'Test set:Aberage loss:{test_loss:.4f}\n,tp:{tp}\n,fp:{fp}\n,tn:{tn}\n,fn:{fn}\n,precision:{tp/(tp+fp)}\n,recall:{tp/(tp+tn)}')
+        print(
+            f"Test set:Aberage loss:{test_loss:.4f}\n,tp:{tp}\n,fp:{fp}\n,tn:{tn}\n,fn:{fn}\n,precision:{tp/(tp+fp)}\n,recall:{tp/(tp+tn)}"
+        )
     else:
-        assert False ,'Set correct mode'
+        assert False, "Set correct mode"

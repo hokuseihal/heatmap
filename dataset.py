@@ -5,7 +5,6 @@ import numpy as np
 import torch
 from PIL import Image
 from torchvision.transforms import Compose
-from torchvision.transforms import Normalize
 from torchvision.transforms import Resize
 from torchvision.transforms import ToTensor
 

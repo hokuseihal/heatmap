@@ -142,7 +142,6 @@ for e in range(4):
     test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
 # RDD train
 torch.save(patchmodel,'patchmodel.pth')
-
-#for e in range(num_epoch):
-#    train(patchmodel, device, train_rdd_loader, rdclossf, optimizer, e)
-#    test(patchmodel, device, test_rdd_loader, rdclossf, rdcaccf, mode="tp_fp_tn_fn")
+    #for e in range(num_epoch):
+    #    train(patchmodel, device, train_rdd_loader, rdclossf, optimizer, e)
+    #    test(patchmodel, device, test_rdd_loader, rdclossf, rdcaccf, mode="tp_fp_tn_fn")
