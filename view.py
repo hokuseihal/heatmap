@@ -23,7 +23,7 @@ from patch import patchmodel
 root = os.environ["HOME"] + "/src/RoadDamageDataset/All/"
 labelroot = root + "labels/"
 imageroot = root + "JPEGImages/"
-# pmodel = torch.load("patchmodel.pth", "cpu")
+#pmodel = torch.load("patchmodel.pth", "cpu")
 pmodel = patchmodel.to("cpu")
 patch = True
 for i in os.listdir(imageroot):

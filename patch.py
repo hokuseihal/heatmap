@@ -131,15 +131,14 @@ def rdcaccf(target, pred, limit=0.5):
             fn.view(-1, fn.shape[-1]).sum(0),
         ]
     )
-def main():
-    rdclossf = F.mse_loss
-    for e in range(16):
-        test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
-        train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
-        test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
-        test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
+rdclossf = F.mse_loss
+for e in range(8):
+    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
+    train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
+    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
+    test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
 # RDD train
-    torch.save(patchmodel,'patchmodel.pth')
+torch.save(patchmodel,'patchmodel.pth')
     #for e in range(num_epoch):
         #    train(patchmodel, device, train_rdd_loader, rdclossf, optimizer, e)
         #    test(patchmodel, device, test_rdd_loader, rdclossf, rdcaccf, mode="tp_fp_tn_fn")
