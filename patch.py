@@ -1,17 +1,11 @@
-import os
-
 import torch
 import torch.nn.functional as F
 from torch import nn
 from torchvision import models
 
-from core import test
-from core import train
-from dataset import PatchDataset as PD
+from core import train, test, SoftmaxFocalLoss, SoftmaxAutoweightedTotalLoss, SoftmaxAutoweightedLoss
 from dataset import RoadDamagePatchDataset as RDPD
-
-# model
-# trial CNN
+from dataset import PatchDataset as PD
 
 
 class TrialModel(nn.Module):
@@ -37,21 +31,24 @@ class TrialModel(nn.Module):
 
 
 class PatchModel(nn.Module):
-    def __init__(self):
+    def __init__(self, cls):
         super(PatchModel, self).__init__()
         self.cnn = models.mobilenet_v2(pretrained=True)
-        self.fc = nn.Linear(1000, 2)
+        self.fc1 = nn.Linear(1000, 256)
+        self.fc2 = nn.Linear(256, 16)
+        self.fc3 = nn.Linear(16, cls)
 
     def forward(self, x):
+        s = x.shape
+        x = x.reshape(-1, *s[-3:])
         x = self.cnn(x)
-        x = self.fc(x)
+        x = F.relu(x)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
+        x = F.relu(x)
+        x = self.fc3(x)
         return x
-
-
-# 1. pretrained CNN -> FC
-# 2. CNN -> FC
-# 3. pretrained CNN -> CNN
-# 4. CNN -> CNN
 
 
 class ClassModel(nn.Module):
@@ -75,42 +72,36 @@ class ClassModel(nn.Module):
         x = self.cnn1(x)
         # (N,Ws,Hs,Cls)
         return (x + 1) / 2
-        
+
         # (N,Ws,Hs,Cls,conf)
+
+
 # load data
-batchsize = 32
-num_epoch = 16
-rdd = RDPD(rddbase="All/", patchbase="rdd_patch/", split=(6, 6))
-pd = PD("rdd_patch/")
+batchsize = 72
+num_epoch = 32
+cls = 5
+# rdpd = RDPD(rddbase="All/", patchbase="rdd_patch/", split=(6, 6))
+rdpd = PD('rdd_patch/')
 train_rdd, test_rdd = torch.utils.data.random_split(
-    rdd, [int(len(rdd) * 0.7), len(rdd) - int(len(rdd) * 0.7)]
-)
-train_pd, test_pd = torch.utils.data.random_split(
-    pd, [int(len(pd) * 0.7), len(pd) - int(len(pd) * 0.7)]
+    rdpd, [int(len(rdpd) * 0.7), len(rdpd) - int(len(rdpd) * 0.7)]
 )
 
-train_rdd_loader = torch.utils.data.DataLoader(
+train_rdpd_loader = torch.utils.data.DataLoader(
     train_rdd, batch_size=batchsize, shuffle=True
 )
-test_rdd_loader = torch.utils.data.DataLoader(
+test_rdpd_loader = torch.utils.data.DataLoader(
     test_rdd, batch_size=batchsize, shuffle=True
-)
-train_pd_loader = torch.utils.data.DataLoader(
-    train_pd, batch_size=batchsize, shuffle=True
-)
-test_pd_loader = torch.utils.data.DataLoader(
-    test_pd, batch_size=batchsize, shuffle=True
-)
-non_crack_pd = PD("rdd_patch/", non_crack=True)
-test_non_crack_pd_loader = torch.utils.data.DataLoader(
-    non_crack_pd, batch_size=batchsize, shuffle=True
 )
 # finetuning
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
-patchmodel = PatchModel().to(device)
-optimizer = torch.optim.Adam(patchmodel.parameters())
+patchmodel = PatchModel(cls).to(device)
+optimizer = torch.optim.Adam(patchmodel.parameters(), lr=1e-5)
 patchlossf = nn.CrossEntropyLoss()
+patchlossf = nn.CrossEntropyLoss(weight=torch.Tensor([0.01, 0.5, 0.33, 0.33, 1]).to(device))
+patchlossf = SoftmaxAutoweightedLoss(cls)
+patchlossf = SoftmaxAutoweightedTotalLoss(cls)
+patchlossf = SoftmaxFocalLoss()
 
 
 def patchaccf(target, pred):
@@ -131,14 +122,19 @@ def rdcaccf(target, pred, limit=0.5):
             fn.view(-1, fn.shape[-1]).sum(0),
         ]
     )
-rdclossf = F.mse_loss
-for e in range(8):
-    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
-    train(patchmodel, device, train_pd_loader, patchlossf, optimizer, e)
-    test(patchmodel, device, test_pd_loader, patchlossf, patchaccf)
-    test(patchmodel, device, test_non_crack_pd_loader, patchlossf, patchaccf)
-# RDD train
-torch.save(patchmodel,'patchmodel.pth')
-    #for e in range(num_epoch):
-        #    train(patchmodel, device, train_rdd_loader, rdclossf, optimizer, e)
-        #    test(patchmodel, device, test_rdd_loader, rdclossf, rdcaccf, mode="tp_fp_tn_fn")
+
+
+def prmap(target, pred):
+    num_cls = pred.shape[-1]
+    numbatch = pred.shape[0]
+    rmap = torch.zeros((num_cls, num_cls))
+    for i in range(numbatch):
+        rmap[target[i], pred[i].argmax()] += 1
+    return rmap
+
+
+test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
+for e in range(num_epoch):
+    train(patchmodel, device, train_rdpd_loader, patchlossf, optimizer, e)
+    test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
+torch.save(patchmodel, 'patchmodel.pth')

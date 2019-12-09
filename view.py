@@ -8,16 +8,8 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 from PIL import ImageDraw
-from torchvision.transforms import Resize
-
-from core import PIL2Tail
 from loadimg import loadimgsp
-from mein import Aspect
-from mein import canny
-from mein import del_trimming
-from mein import kmeans
 from mein import putboxes
-from patch import PatchModel
 from patch import patchmodel
 
 root = os.environ["HOME"] + "/src/RoadDamageDataset/All/"

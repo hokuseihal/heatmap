@@ -3,12 +3,12 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from PIL import Image
 from torchvision.transforms import Compose
 from torchvision.transforms import Resize
 from torchvision.transforms import ToTensor
 
-from core import PIL2Tail
 
 
 def noex(path):
@@ -16,6 +16,7 @@ def noex(path):
 
 
 # patch dataset
+
 
 
 def getbb(basename, xmlbase="All/Annotations/", normalize=True):
@@ -31,27 +32,62 @@ def getbb(basename, xmlbase="All/Annotations/", normalize=True):
             raise ValueError
         for obj in root.iter("object"):
             xmlbox = obj.find("bndbox")
+            b = (
+                float(xmlbox.find("xmin").text) / w,
+                float(xmlbox.find("ymin").text) / h,
+                float(xmlbox.find("xmax").text) / w,
+                float(xmlbox.find("ymax").text) / h,
+            )
             if normalize:
-                b = (
-                    float(xmlbox.find("xmin").text) / w,
-                    float(xmlbox.find("xmax").text) / w,
-                    float(xmlbox.find("ymin").text) / h,
-                    float(xmlbox.find("ymax").text) / h,
-                )
+                pass
 
             else:
 
                 b = (
                     float(xmlbox.find("xmin").text),
-                    float(xmlbox.find("xmax").text),
                     float(xmlbox.find("ymin").text),
+                    float(xmlbox.find("xmax").text),
                     float(xmlbox.find("ymax").text),
                 )
             cls = classes.index(obj.find("name").text)
             bb.append((cls, b))
         return bb
+def path2cls(numpath):
+    pass
+class PatchDataset(torch.utils.data.Dataset):
+    def __init__(self, base, rddbase='All/',in_transform=None,split=(6,6)):
+        self.transform = (
+            Compose([Resize((128, 128)), ToTensor()])
+            if in_transform is None
+            else in_transform
+        )
+        self.positive_base = base + "Positive/"
+        self.negative_base = base + "Negative/"
+        self.negative_road_base = base + "Negative_road/"
+        self.imagelist = (
+                [
+                    (self.positive_base + path, pos2cls_cof(rddbase,*(split_head_num(path)),split))
+                    for path in os.listdir(self.positive_base)
+                ]
+                + [
+                    (self.negative_base + path, 0)
+                    for path in (os.listdir(self.negative_base))
+                ]
+                + [
+                    (self.negative_road_base + path, 0)
+                    for path in os.listdir(self.negative_road_base)
+                ]
+        )
+        print(f"Patch:{len(self.imagelist)}")
 
+    def __len__(self):
+        return len(self.imagelist)
 
+    def __getitem__(self, idx):
+        impath, label = self.imagelist[idx]
+        return self.transform(Image.open(impath)), label
+
+'''
 class PatchDataset(torch.utils.data.Dataset):
     def __init__(self, base, in_transform=None, ratio=0.5, non_crack=False):
         self.transform = (
@@ -67,27 +103,27 @@ class PatchDataset(torch.utils.data.Dataset):
             self.imagelist = [
                 (self.negative_road_base + path, 0)
                 for path in sorted(os.listdir(self.negative_road_base))[
-                    int(ratio * len(os.listdir(self.negative_road_base))) :
-                ]
+                            int(ratio * len(os.listdir(self.negative_road_base))):
+                            ]
             ]
         else:
             self.imagelist = (
-                [
-                    (self.positive_base + path, 1)
-                    for path in os.listdir(self.positive_base)
-                ]
-                + [
-                    (self.negative_base + path, 0)
-                    for path in (os.listdir(self.negative_base))[
-                        : int((1 - ratio) * len(os.listdir(self.positive_base)))
+                    [
+                        (self.positive_base + path, 1)
+                        for path in os.listdir(self.positive_base)
                     ]
-                ]
-                + [
-                    (self.negative_road_base + path, 0)
-                    for path in sorted(os.listdir(self.negative_road_base))[
-                        : int(ratio * len(os.listdir(self.negative_road_base)))
+                    + [
+                        (self.negative_base + path, 0)
+                        for path in (os.listdir(self.negative_base))[
+                                    : int((1 - ratio) * len(os.listdir(self.positive_base)))
+                                    ]
                     ]
-                ]
+                    + [
+                        (self.negative_road_base + path, 0)
+                        for path in sorted(os.listdir(self.negative_road_base))[
+                                    : int(ratio * len(os.listdir(self.negative_road_base)))
+                                    ]
+                    ]
             )
         print(f"Patch:{len(self.imagelist)}")
 
@@ -98,12 +134,12 @@ class PatchDataset(torch.utils.data.Dataset):
         impath, label = self.imagelist[idx]
         return self.transform(Image.open(impath)), label
 
-
+'''
 # RDD dataset
-classes = ["D00", "D01", "D10", "D11", "D20", "D40", "D43", "D44", "D30"]
+classes = ["","","D00", "D01", "D10", "D11", "D20", "D40", "D43", "D44", "D30"]
 num_cls = len(classes)
 
-
+'''
 class RDcDataset(torch.utils.data.Dataset):
     # just convert bbox to tensor
     # this contains non_crack image as crack
@@ -137,12 +173,12 @@ class RDcDataset(torch.utils.data.Dataset):
             r_tensor = torch.zeros((*(self.split), len(classes)))
             for cls, b in bb:
                 r_tensor[
-                    round(b[0] / w_d) : round(b[1] / w_d),
-                    round(b[2] / h_d) : round(b[3] / h_d),
-                    cls,
+                round(b[0] / w_d): round(b[1] / w_d),
+                round(b[2] / h_d): round(b[3] / h_d),
+                cls,
                 ] = 1
             return self.transforms(im), r_tensor
-
+'''
 
 def split_head_num(s):
     import re
@@ -156,7 +192,7 @@ def isinbox(pos, sp, b):
     return (
         True
         if (b[0] <= (pos % sp[0] + 0.5) / sp[0] <= b[1])
-        and (b[2] <= ((pos // sp[1] + 0.5) / sp[1]) <= b[3])
+           and (b[2] <= ((pos // sp[1] + 0.5) / sp[1]) <= b[3])
         else False
     )
 
@@ -169,32 +205,67 @@ def pos2posvec(base, imp, pos, sp):
         r_tensor[cls] = 1.0 if isinbox(pos, sp, b) else 0.0
     return r_tensor
 
+c=0
+def cal_iou(boxA, boxB):
+    # determine the (x, y)-coordinates of the intersection rectangle
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+    #crash ?
+    if not (boxA[0] < boxB[2] and boxA[2] > boxB[0] and boxA[1] < boxB[3] and boxA[3] > boxB[1]):
+        return 0
+    # compute the area of intersection rectangle
+    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
 
-def pos2cls_cof(base, imp, pos, sp):
-    #TODO debug
+    # compute the area of both the prediction and ground-truth
+    # rectangles
+    boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
+    boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
+
+    # compute the intersection over union by taking the intersection
+    # area and dividing it by the sum of prediction + ground-truth
+    # areas - the interesection area
+    iou = interArea / float(boxAArea + boxBArea - interArea)
+
+    # return the intersection over union value
+    return iou
+def pos2coor(pos,sp):
+    x,y=num2postuple(pos,sp)
+    return (x/sp[0],y/sp[1],(x+1)/sp[0],(y+1)/sp[1])
+def pos2cls_cof(base, pos, imp, sp):
+    global c
     basename = imp.split(".")[0]
     bb = getbb(basename, xmlbase=base + "Annotations/")
-    # TODO -1 is none class
+    preiou=0
+    rcls=1
     for cls, b in bb:
-        r = torch.Tensor([cls, 1.0]) if isinbox(pos, sp, b) else torch.Tensor([-1, 0.0])
-    return r
+        iou=cal_iou(b,pos2coor(pos,sp))
+        if preiou<iou:
+            if preiou!=0:c+=1
+            preiou=iou
+            rcls=cls
+    assert rcls!=0
+    def capsle(cls):
+        l=[0,1,2,2,2,2,3,4,1,1,1]
+        #print(l[cls])
+        return l[cls]
+    rcls=capsle(rcls)
+    return rcls
 
 
 def num2postuple(num, sp):
     return num % sp[0], num // sp[0]
 
 
+#TODO DEBUG
+from loadimg import loadimgsp
 class RoadDamagePatchDataset(torch.utils.data.Dataset):
-    def __init__(self, rddbase, patchbase, split, transforms=None):
+    def __init__(self, rddbase, patchbase, split):
         assert isinstance(split, tuple), "argment sp's type must be TUPLE."
         assert len(split) == 2, "argment sp's length must be 2."
         self.rddbase = rddbase
         self.patchbase = patchbase
-        self.transforms = (
-            Compose([Resize((768, 768)), PIL2Tail(*split, "torch")])
-            if transforms is None
-            else transforms
-        )
         self.namelist = []
         self.num_cls = num_cls
         foll = ["Positive", "Negative", "Negative_road"]
@@ -203,19 +274,20 @@ class RoadDamagePatchDataset(torch.utils.data.Dataset):
                 num, basename = split_head_num(imp)
                 if basename not in self.namelist:
                     self.namelist.append(basename)
-        self.targetl = torch.zeros((len(self.namelist), *split, 2))
+        self.targetl = torch.zeros((len(self.namelist), *split))
 
         # on each num ,get bbox info and restore if patch is positive
         for imp in os.listdir(patchbase + "Positive"):
             num, basename = split_head_num(imp)
             self.targetl[
                 (self.namelist.index(basename), *num2postuple(num, split))
-            ] = pos2cls_cof(rddbase, basename, num, split)
+            ] = pos2cls_cof(rddbase, num, basename, split)
+        print(c)
 
     def __len__(self):
         return len(self.namelist)
 
     def __getitem__(self, idx):
         # return shape : tensor(Ws,Hs,C)
-        im = Image.open(self.rddbase + "JPEGImages/" + self.namelist[idx] + ".jpg")
-        return self.transforms(im), self.targetl[idx, :, :]
+        im=loadimgsp(self.rddbase + "JPEGImages/" + self.namelist[idx] + ".jpg")
+        return im, self.targetl[idx].reshape(-1).long()

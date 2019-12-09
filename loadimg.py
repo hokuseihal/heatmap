@@ -18,7 +18,5 @@ def loadimgsp(imp,sp=6):
     [out_img.extend(np.hsplit(h_img, h_split)) for h_img in np.vsplit(img, v_split)]
     for i in range(len(out_img)):
         out_img[i]=ToTensor()(Resize((128,128))(Image.fromarray(out_img[i])))
-        loadimg=ToTensor()(Image.open("rdd_patch/Negative/0Adachi_20170914152124.jpg"))
-        #a=((loadimg-pilimg)**2).sum()
     return torch.stack(out_img)
 loadimgsp('All/JPEGImages/Adachi_20170914152124.jpg')

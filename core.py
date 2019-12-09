@@ -1,41 +1,83 @@
 import torch
 import torch.nn.functional as F
 
+class SoftmaxFocalLoss(torch.nn.Module):
+    def __init__(self,gammma=2,average=True):
+        super(SoftmaxFocalLoss,self).__init__()
+        self.gammma=gammma
+        self.average=average
 
-class PIL2Tail(object):
-    def __init__(self, w_s, h_s, r="numpy"):
-        self.w_s = w_s
-        self.h_s = h_s
-        self.r = r
+    def forward(self, input,target):
+        '''
+        input:(B,C) :float32
+        target(B)   :Long
+        output(1)      :float32
+        '''
+        target=target.reshape(-1)
+        assert input.dtype==torch.float
+        assert target.dtype==torch.long
+        assert len(input.shape)==2
+        assert input.shape[0]==target.shape[0]
+        pt=F.softmax(input,dim=-1)
+        logpt=F.log_softmax(input,dim=-1)
+        input=-((1-pt)**self.gammma)*logpt
+        input=input[range(input.shape[0]),target]
+        if self.average:
+            return input.mean()
+        else:
+            return input.sum()
+class SoftmaxAutoweightedLoss(torch.nn.Module):
+    def __init__(self,cls):
+        super(SoftmaxAutoweightedLoss,self).__init__()
+        self.cls=cls
 
-    def __call__(self, im):
-        import numpy as np
-        import torch
+    def forward(self, input,target):
+        '''
+        input:(B,C) :float32
+        target(B)   :Long
+        output(1)      :float32
+        '''
+        target=target.reshape(-1)
+        assert input.dtype==torch.float
+        assert target.dtype==torch.long
+        assert len(input.shape)==2
+        assert input.shape[0]==target.shape[0]
+        c=torch.stack([(1-target).sum(),target.sum()]).float()
+        c=c.min()/c+1e-5
+        lossf=torch.nn.CrossEntropyLoss(weight=c)
+        return lossf(input,target)
+class SoftmaxAutoweightedTotalLoss(torch.nn.Module):
+    def __init__(self,cls):
+        super(SoftmaxAutoweightedTotalLoss,self).__init__()
+        self.gamma=2
+        self.cls=cls
 
-        self.w_d = im.size[0] // self.w_s
-        self.h_d = im.size[0] // self.h_s
-
-        im = np.array(im.rotate(90))
-        im = im.reshape(
-            im.shape[0] // self.w_d,
-            self.w_d,
-            im.shape[1] // self.h_d,
-            self.h_d,
-            im.shape[2],
-        ).swapaxes(1, 2)
-        if self.r == "numpy":
-            # (NW,NH,W,H,C)
-            return im
-        elif self.r == "torch":
-            # (NW,NH,C,H,W)
-            return torch.from_numpy(im).permute(0, 1, 4, 3, 2)
+    def forward(self, input,target):
+        '''
+        input:(B,C) :float32
+        target(B)   :Long
+        output(1)      :float32
+        '''
+        target=target.reshape(-1)
+        assert input.dtype==torch.float
+        assert target.dtype==torch.long
+        assert len(input.shape)==2
+        assert input.shape[0]==target.shape[0]
+        c=torch.stack([(target==i).sum() for i in range(self.cls)]).float()
+        c=c.min()/c+1e-5
+        pt = F.softmax(input, dim=-1)
+        logpt = F.log_softmax(input, dim=-1)
+        input = -((1 - pt) ** self.gamma) * logpt
+        input = input[range(input.shape[0]), target]*torch.stack([c[t] for t in target])
+        return input.mean()
 
 
 def train(model, device, train_loader, lossf, optimizer, epoch, log_interval=1):
     model.train()
     tloss = 0
+    log_interval=len(train_loader)
     for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device, dtype=torch.float32), target.to(device)
+        data, target = data.to(device, dtype=torch.float32), target.to(device).reshape(-1)
         optimizer.zero_grad()
         output = model(data)
         loss = lossf(output, target)
@@ -55,41 +97,33 @@ def train(model, device, train_loader, lossf, optimizer, epoch, log_interval=1):
             tloss = 0
 
 
-def test(model, device, test_loader, lossf, accf, mode="correct"):
+def test(model, device, test_loader, lossf, accf,prf):
     # accf:input:*labels,*labels
     #    :return:number of TP
     model.eval()
     test_loss = 0
     correct = 0
-    tp_fp_tn_fn = torch.zeros(4, 6)
+    rmap=0
     with torch.no_grad():
         for data, target in test_loader:
-            data, target = data.to(device, dtype=torch.float32), target.to(device)
+            data, target = data.to(device, dtype=torch.float32), target.to(device).reshape(-1)
             output = model(data)
             # sum up batch loss
-            test_loss += lossf(output, target).item()
+            test_loss += lossf(output, target)
             # get the index of the max log-probability
-            if mode == "correct":
-                pred = output.argmax(dim=-1, keepdim=True)
-                correct += accf(target, pred)
-            elif mode == "tp_fp_tn_fn":
-                tp_fp_tn_fn += accf(target, output)
-            else:
-                assert False, "Set correct mode"
 
-    if mode == "correct":
-        print(
-            "\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
-                test_loss/len(test_loader),
-                correct,
-                len(test_loader.dataset),
-                100.0 * correct / len(test_loader.dataset),
-            )
+            pred = output.argmax(dim=-1, keepdim=True)
+            correct += accf(target, pred)
+            rmap+= prf(target, output)
+
+
+    print(
+        "Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)".format(
+            test_loss/len(test_loader),
+            correct,
+            len(test_loader)*72,
+            100.0 * correct / (len(test_loader)*72),
         )
-    elif mode == "tp_fp_tn_fn":
-        tp, fp, tn, fn = tp_fp_tn_fn
-        print(
-            f"Test set:Aberage loss:{test_loss:.4f}\n,tp:{tp}\n,fp:{fp}\n,tn:{tn}\n,fn:{fn}\n,precision:{tp/(tp+fp)}\n,recall:{tp/(tp+tn)}"
-        )
-    else:
-        assert False, "Set correct mode"
+    )
+
+    print(f'precision:{rmap.diag()/rmap.sum(dim=-1)}\nrecall:{rmap.diag()/rmap.sum(dim=0)}\n\n')
