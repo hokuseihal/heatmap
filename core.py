@@ -138,11 +138,8 @@ def yolotrain(model, device, train_loader, lossf, optimizer, epoch, log_interval
         optimizer.step()
         #print(f'{loss.item():.6f}')
         tloss.append(loss.item())
-
-
-
         if (batch_idx + 1) % log_interval == 0:
-            print(f'Train Epoch: {epoch} [{batch_idx:5d}/{len(train_loader)} ({batch_idx/len(train_loader)*100:.0f}%)]\tLoss: {np.mean(tloss):.6f}')
+            print(f'Train Epoch: {epoch} [{batch_idx:5d}/{len(train_loader)} ({batch_idx/len(train_loader)*100:.0f}%)]\tLoss: {np.mean(tloss)}')
             tloss = []
 
 def test(model, device, test_loader, lossf, accf, prf):
@@ -188,7 +185,7 @@ def yolotest(model, device, test_loader, lossf, accf, prf):
             test_loss .append( lossf(output, target).item())
             #prf(yolo_xy,yolo_wh,output,imgname)
 
-    print(f'Test set: Average loss: {np.mean(test_loss):.4f}')
+    print(f'Test set: Average loss: {np.mean(test_loss)}')
 
 
 

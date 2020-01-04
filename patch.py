@@ -166,7 +166,7 @@ def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.5):
     boxes=boxes.view(-1, 4)
     score=score.view(-1)
     cls=cls.view(-1,1)
-    ids = nms(boxes, score, 0.5)
+    ids = nms(boxes.cpu(), score.cpu(), 0.5)
     with open('catyolo.csv', 'w') as f:
         writer = csv.writer(f)
         for i in ids:
