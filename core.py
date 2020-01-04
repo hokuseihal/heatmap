@@ -86,7 +86,7 @@ class FocalLoss(torch.nn.Module):
 
     def forward(self, input, target):
         assert input.shape == target.shape
-        assert 0 <= input.min()
+        #assert 0 <= input.min()
         assert 1 >= input.max()
         assert 0 <= target.min()
         assert 1 >= target.max()
@@ -136,7 +136,7 @@ def yolotrain(model, device, train_loader, lossf, optimizer, epoch, log_interval
         loss = lossf(output, target)
         loss.backward()
         optimizer.step()
-        #print(loss.item())
+        #print(f'{loss.item():.6f}')
         tloss.append(loss.item())
 
 

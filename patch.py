@@ -70,7 +70,7 @@ class YoloPatchmodel(nn.Module):
         x = self.cnn6(x)
         x = x.permute(0, 3, 2, 1)
         x = x.view(-1, 13, 13, 5, 7)
-        x = torch.sigmoid(x)
+        #x = torch.sigmoid(x)
         return x
 
 
