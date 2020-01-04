@@ -89,7 +89,7 @@ test_rdpd_loader = torch.utils.data.DataLoader(
     test_rdd, batch_size=batchsize, shuffle=True
 )
 # TODO load train.txt
-ypd = YPD('/home/hokusei/src/RoadDamageDataset/All/', '/home/hokusei/src/YAD2K/pickle.pkl')
+ypd = YPD('All/', 'pickle.pkl')
 train_rdd, test_rdd = torch.utils.data.random_split(
     ypd, [int(len(ypd) * 0.7), len(ypd) - int(len(ypd) * 0.7)]
 )

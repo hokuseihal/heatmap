@@ -204,7 +204,7 @@ classes = ['D00', 'D01', 'D10', 'D11', 'D20', 'D40']
 import xml.etree.ElementTree as ET
 import numpy as np
 
-def readanchors(anchors_path='/home/hokusei/src/YAD2K/model_data/yolo_anchors.txt'):
+def readanchors(anchors_path='yolo_anchors.txt'):
     with open(anchors_path) as f:
         anchors = f.readline()
         anchors = [float(x) for x in anchors.split(',')]
