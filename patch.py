@@ -91,16 +91,13 @@ test_rdpd_loader = torch.utils.data.DataLoader(
     test_rdd, batch_size=batchsize, shuffle=True
 )
 # TODO load train.txt
-ypd = YPD('All/', 'pickle.pkl')
-train_rdd, test_rdd = torch.utils.data.random_split(
-    ypd, [int(len(ypd) * 0.7), len(ypd) - int(len(ypd) * 0.7)]
-)
-
+train_ypd = YPD('All/', 'pickle.pkl','All/ImageSets/Main/train.txt')
+test_ypd=YPD('All/', 'pickle.pkl','All/ImageSets/Main/val.txt')
 train_ypd_loader = torch.utils.data.DataLoader(
-    train_rdd, batch_size=4, shuffle=False
+    train_ypd, batch_size=4, shuffle=False
 )
 test_ypd_loader = torch.utils.data.DataLoader(
-    test_rdd, batch_size=4, shuffle=False
+    test_ypd, batch_size=4, shuffle=False
 )
 # finetuning
 device = "cuda" if torch.cuda.is_available() else "cpu"

@@ -295,14 +295,17 @@ import pickle
 from loadimg import loadimgsp
 from core import xml2clsconf
 class YOLOcatPatchDataset(torch.utils.data.Dataset):
-    def __init__(self,base,pklpath):
+    def __init__(self,base,pklpath,txtpath):
         self.yolooutput=pickle.load(open(pklpath,'rb'))
         self.base=base
         self.idlist=[]
         #check if file exists
         #generate id list
+        with open(txtpath) as f:
+            rows=f.readlines()
+        rows=list(map(lambda s:s.strip(),rows))
         for idx,(imgfile,_,_,_,_ )in enumerate(self.yolooutput):
-            if os.path.exists(self.base+'/Annotations/'+imgfile.split('.')[0]+'.xml'):
+            if os.path.exists(self.base+'/Annotations/'+imgfile.split('.')[0]+'.xml') and imgfile.split('.')[0] in rows:
                 self.idlist.append(idx)
         print(f'YOLOcat:{len(self)}')
 

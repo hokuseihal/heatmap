@@ -142,7 +142,7 @@ def yolotrain(model, device, train_loader, lossf, optimizer, epoch, log_interval
 
 
         if (batch_idx + 1) % log_interval == 0:
-            print(f'Train Epoch: {epoch} [{batch_idx}/{len(train_loader)} ({batch_idx/len(train_loader)*100:.0f}%)]\tLoss: {np.mean(tloss):.6f}')
+            print(f'Train Epoch: {epoch} [{batch_idx:5d}/{len(train_loader)} ({batch_idx/len(train_loader)*100:.0f}%)]\tLoss: {np.mean(tloss):.6f}')
             tloss = []
 
 def test(model, device, test_loader, lossf, accf, prf):
