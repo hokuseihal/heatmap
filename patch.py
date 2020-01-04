@@ -106,6 +106,7 @@ print(device)
 patchmodel = PatchModel(cls).to(device)
 yolopatchmodel = YoloPatchmodel(cls).to(device)
 optimizer = torch.optim.Adam(patchmodel.parameters())
+yolooptimizer=torch.optim.Adam(yolopatchmodel.patchmodel())
 # patchlossf = nn.CrossEntropyLoss(weight=torch.Tensor([0.01, 0.5, 0.33, 0.33, 1]).to(device))
 # patchlossf = SoftmaxAutoweightedLoss(cls)
 # patchlossf = SoftmaxAutoweightedTotalLoss(cls)
@@ -180,6 +181,6 @@ def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.5):
 #   torch.save(patchmodel.state_dict(), 'patchmodel.pth')
 
 for e in range(num_epoch):
-    yolotrain(yolopatchmodel, device, train_ypd_loader, yolocatpatchlossf, optimizer, e)
+    yolotrain(yolopatchmodel, device, train_ypd_loader, yolocatpatchlossf, yolooptimizer, e)
     yolotest(yolopatchmodel, device, test_ypd_loader, yolocatpatchlossf, patchaccf, nmswritecsv)
     torch.save(patchmodel.state_dict(), 'yolopatchmodel.pth')
