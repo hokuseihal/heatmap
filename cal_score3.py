@@ -2,8 +2,8 @@ import csv
 import xml.etree.ElementTree as ET
 import numpy as np
 
-filename = 'csv/out_da3.csv'
-dataroot = '/home/popo/RoadDamageDataset/All/Annotations'
+filename = 'catyolo.csv'
+dataroot = 'All/Annotations'
 classes = ['D00', 'D01', 'D10', 'D11', 'D20', 'D40', 'D43', 'D44', 'D30']
 resultmat = np.zeros((len(classes), len(classes)), dtype=int)
 realclslist = np.zeros(len(classes), dtype=int)
@@ -77,7 +77,7 @@ def addresult(r, x, mat):
     mat[x_index, r_index] += 1
 
 
-def main():
+def precision_recall():
     with open(filename) as f:
         reader = csv.reader(f)
 
@@ -91,4 +91,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    precision_recall()

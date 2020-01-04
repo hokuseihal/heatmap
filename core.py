@@ -87,9 +87,9 @@ class FocalLoss(torch.nn.Module):
     def forward(self, input, target):
         assert input.shape == target.shape
         #assert 0 <= input.min()
-        assert 1 >= input.max()
-        assert 0 <= target.min()
-        assert 1 >= target.max()
+        #assert 1 >= input.max()
+        #assert 0 <= target.min()
+        #assert 1 >= target.max()
         def focal(_loss,gamma):
             return _loss**gamma
         loss=self.mse(input,target)
@@ -183,7 +183,7 @@ def yolotest(model, device, test_loader, lossf, accf, prf):
             img, data, target = img.to(device), data.to(device, dtype=torch.float32), target.to(device)
             output = model(img,data)
             test_loss .append( lossf(output, target).item())
-            #prf(yolo_xy,yolo_wh,output,imgname)
+            prf(yolo_xy,yolo_wh,output,imgname)
 
     print(f'Test set: Average loss: {np.mean(test_loss)}')
 

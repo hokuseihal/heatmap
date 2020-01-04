@@ -3,8 +3,7 @@ import torch.nn.functional as F
 from torch import nn
 from torchvision import models
 
-from core import yolotrain, yolotest, train, test, SoftmaxFocalLoss, SoftmaxAutoweightedTotalLoss, \
-    SoftmaxAutoweightedLoss, FocalLoss
+from core import yolotrain, yolotest, train, test, SoftmaxFocalLoss,  FocalLoss
 from dataset import YOLOcatPatchDataset as YPD
 from dataset import PatchDataset as PD
 
@@ -90,14 +89,13 @@ train_rdpd_loader = torch.utils.data.DataLoader(
 test_rdpd_loader = torch.utils.data.DataLoader(
     test_rdd, batch_size=batchsize, shuffle=True
 )
-# TODO load train.txt
 train_ypd = YPD('All/', 'pickle.pkl','All/ImageSets/Main/train.txt')
 test_ypd=YPD('All/', 'pickle.pkl','All/ImageSets/Main/val.txt')
 train_ypd_loader = torch.utils.data.DataLoader(
-    train_ypd, batch_size=4, shuffle=False
+    train_ypd, batch_size=4, shuffle=False,num_workers=4
 )
 test_ypd_loader = torch.utils.data.DataLoader(
-    test_ypd, batch_size=4, shuffle=False
+    test_ypd, batch_size=4, shuffle=False,num_workers=4
 )
 # finetuning
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -105,12 +103,10 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 patchmodel = PatchModel(cls).to(device)
 yolopatchmodel = YoloPatchmodel(cls).to(device)
+if os.path.exists('yolopatchmodel.pth'):
+    yolopatchmodel.load_state_dict(torch.load('yolopatchmodel.pth'))
 optimizer = torch.optim.Adam(patchmodel.parameters())
 yolooptimizer=torch.optim.Adam(yolopatchmodel.parameters())
-# patchlossf = nn.CrossEntropyLoss(weight=torch.Tensor([0.01, 0.5, 0.33, 0.33, 1]).to(device))
-# patchlossf = SoftmaxAutoweightedLoss(cls)
-# patchlossf = SoftmaxAutoweightedTotalLoss(cls)
-# patchlossf = nn.CrossEntropyLoss()
 patchlossf = SoftmaxFocalLoss(gammma=2)
 yolocatpatchlossf = FocalLoss()
 
@@ -148,7 +144,7 @@ from core import readanchors
 from torchvision.ops import nms
 import csv
 
-
+from cal_score3 import precision_recall
 def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.5):
     boxes = torch.cat([xy * 600, wh * torch.from_numpy(readanchors())], dim=-1)
     # convert (x,y,w,h) -> (x0,y0,x1,y1)
@@ -181,6 +177,7 @@ def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.5):
 #   torch.save(patchmodel.state_dict(), 'patchmodel.pth')
 
 for e in range(num_epoch):
-    yolotrain(yolopatchmodel, device, train_ypd_loader, yolocatpatchlossf, yolooptimizer, e)
+    #yolotrain(yolopatchmodel, device, train_ypd_loader, yolocatpatchlossf, yolooptimizer, e)
     yolotest(yolopatchmodel, device, test_ypd_loader, yolocatpatchlossf, patchaccf, nmswritecsv)
-    torch.save(patchmodel.state_dict(), 'yolopatchmodel.pth')
+    precision_recall()
+    torch.save(yolopatchmodel.state_dict(), 'yolopatchmodel.pth')
