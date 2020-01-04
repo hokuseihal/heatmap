@@ -177,7 +177,7 @@ def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.5):
 #   torch.save(patchmodel.state_dict(), 'patchmodel.pth')
 
 for e in range(num_epoch):
-    #yolotrain(yolopatchmodel, device, train_ypd_loader, yolocatpatchlossf, yolooptimizer, e)
+    yolotrain(yolopatchmodel, device, train_ypd_loader, yolocatpatchlossf, yolooptimizer, e)
     yolotest(yolopatchmodel, device, test_ypd_loader, yolocatpatchlossf, patchaccf, nmswritecsv)
     precision_recall()
     torch.save(yolopatchmodel.state_dict(), 'yolopatchmodel.pth')
