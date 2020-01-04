@@ -186,7 +186,7 @@ def yolotest(model, device, test_loader, lossf, accf, prf):
             img, data, target = img.to(device), data.to(device, dtype=torch.float32), target.to(device)
             output = model(img,data)
             test_loss .append( lossf(output, target).item())
-            prf(yolo_xy,yolo_wh,output,imgname)
+            #prf(yolo_xy,yolo_wh,output,imgname)
 
     print(f'Test set: Average loss: {np.mean(test_loss):.4f}')
 
