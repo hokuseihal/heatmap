@@ -304,6 +304,7 @@ class YOLOcatPatchDataset(torch.utils.data.Dataset):
         for idx,(imgfile,_,_,_,_ )in enumerate(self.yolooutput):
             if os.path.exists(self.base+'/Annotations/'+imgfile.split('.')[0]+'.xml'):
                 self.idlist.append(idx)
+        print(f'YOLOcat:{len(self)}')
 
     def __len__(self):
         return len(self.idlist)

@@ -129,6 +129,7 @@ def yolotrain(model, device, train_loader, lossf, optimizer, epoch, log_interval
     tloss =[]
     #log_interval = len(train_loader)
     for batch_idx, (img,data, target,_,_,_) in enumerate(train_loader):
+        model=model.to(device)
         img,data, target = img.to(device),data.to(device, dtype=torch.float32), target.to(device)
         optimizer.zero_grad()
         output = model(img,data)
@@ -177,27 +178,18 @@ def test(model, device, test_loader, lossf, accf, prf):
         exit(0)
 
 def yolotest(model, device, test_loader, lossf, accf, prf):
+    model=model.to(device)
     model.eval()
-    test_loss = 0
-    correct = 0
-    rmap = 0
+    test_loss = []
     with torch.no_grad():
         for img,data, target,yolo_xy,yolo_wh,imgname in test_loader:
             img, data, target = img.to(device), data.to(device, dtype=torch.float32), target.to(device)
             output = model(img,data)
-            test_loss += lossf(output, target)
+            test_loss .append( lossf(output, target).item())
             prf(yolo_xy,yolo_wh,output,imgname)
 
-    print(
-        "Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)".format(
-            test_loss / len(test_loader),
-            correct,
-            len(test_loader) * 72,
-            100.0 * correct / (len(test_loader) * 72),
-        )
-    )
+    print(f'Test set: Average loss: {np.mean(test_loss):.4f}')
 
-    print(f'precision:{rmap.diag() / rmap.sum(dim=-1)}\nrecall:{rmap.diag() / rmap.sum(dim=0)}\n\n')
 
 
 classes = ['D00', 'D01', 'D10', 'D11', 'D20', 'D40']
@@ -209,7 +201,7 @@ def readanchors(anchors_path='yolo_anchors.txt'):
         anchors = f.readline()
         anchors = [float(x) for x in anchors.split(',')]
         anchors = np.array(anchors).reshape(-1, 2)
-        return anchors
+        return anchors.astype(np.float32)
 def xml2clsconf(path, split):
     clsconf = np.zeros((split, split, 5,len(classes) + 1),dtype=np.float32)
     anchors=readanchors()

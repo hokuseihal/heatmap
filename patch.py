@@ -3,7 +3,8 @@ import torch.nn.functional as F
 from torch import nn
 from torchvision import models
 
-from core import yolotrain,yolotest,train, test, SoftmaxFocalLoss, SoftmaxAutoweightedTotalLoss, SoftmaxAutoweightedLoss, FocalLoss
+from core import yolotrain, yolotest, train, test, SoftmaxFocalLoss, SoftmaxAutoweightedTotalLoss, \
+    SoftmaxAutoweightedLoss, FocalLoss
 from dataset import YOLOcatPatchDataset as YPD
 from dataset import PatchDataset as PD
 
@@ -30,6 +31,7 @@ class PatchModel(nn.Module):
         x = F.relu(x)
         x = self.fc3(x)
         return x
+
 
 class YoloPatchmodel(nn.Module):
     def __init__(self, cls):
@@ -95,10 +97,10 @@ train_rdd, test_rdd = torch.utils.data.random_split(
 )
 
 train_ypd_loader = torch.utils.data.DataLoader(
-    train_rdd, batch_size=4, shuffle=True
+    train_rdd, batch_size=4, shuffle=False
 )
 test_ypd_loader = torch.utils.data.DataLoader(
-    test_rdd, batch_size=4, shuffle=True
+    test_rdd, batch_size=4, shuffle=False
 )
 # finetuning
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -150,33 +152,37 @@ import csv
 
 
 def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.5):
-    boxes = torch.cat([xy * 600, wh * readanchors()], dim=-1)
+    boxes = torch.cat([xy * 600, wh * torch.from_numpy(readanchors())], dim=-1)
     # convert (x,y,w,h) -> (x0,y0,x1,y1)
-    x0 = boxes[:, :, :, :, 0] - boxes[:, :, :, :, 2] / 2
-    y0 = boxes[:, :, :, :, 1] - boxes[:, :, :, :, 3] / 2
-    x1 = boxes[:, :, :, :, 0] + boxes[:, :, :, :, 2] / 2
-    y1 = boxes[:, :, :, :, 1] + boxes[:, :, :, :, 3] / 2
+    x0 = boxes[:, :, :, :, :, 0] - boxes[:, :, :, :, :, 2] / 2
+    y0 = boxes[:, :, :, :, :, 1] - boxes[:, :, :, :, :, 3] / 2
+    x1 = boxes[:, :, :, :, :, 0] + boxes[:, :, :, :, :, 2] / 2
+    y1 = boxes[:, :, :, :, :, 1] + boxes[:, :, :, :, :, 3] / 2
+    x0 = x0.view(*x0.shape, 1)
+    y0 = y0.view(*y0.shape, 1)
+    x1 = x1.view(*x1.shape, 1)
+    y1 = y1.view(*y1.shape, 1)
     boxes = torch.cat([x0, y0, x1, y1], dim=-1)
-    score = clsconf[:, :, :, :-1].max(dim=-1) * clsconf[:, :, :, :, -1]
-    cls = clsconf[:, :, :, :-1].argmax(dim=-1)
-    boxes.view(-1, 4)
-    score.view(-1)
+    score ,cls= clsconf[:, :, :, :,:-1].max(dim=-1)
+    score*=clsconf[:,:,:,:,-1]
+    boxes=boxes.view(-1, 4)
+    score=score.view(-1)
+    cls=cls.view(-1,1)
     ids = nms(boxes, score, 0.5)
     with open('catyolo.csv', 'w') as f:
         writer = csv.writer(f)
         for i in ids:
-            if score[i]>thresh:
-                writer.writerow([imgname[i], cls[i], score[i], boxes[i]])
-
+            if score[i] > thresh:
+                writer.writerow([imgname[i//(13*13*5)].split('.')[0], cls[i].item(), score[i].item(), *boxes[i].int().tolist()])
 
 # test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
 ##pretraining for patch binary classification
-#for e in range(num_epoch):
+# for e in range(num_epoch):
 #   train(patchmodel, device, train_rdpd_loader, patchlossf, optimizer, e)
 #   test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
 #   torch.save(patchmodel.state_dict(), 'patchmodel.pth')
 
 for e in range(num_epoch):
     yolotrain(yolopatchmodel, device, train_ypd_loader, yolocatpatchlossf, optimizer, e)
-    yolotest(yolopatchmodel, device, test_ypd_loader, yolocatpatchlossf, patchaccf, nmswritecsv)
+    yolotest(yolopatchmodel, 'cpu', test_ypd_loader, yolocatpatchlossf, patchaccf, nmswritecsv)
     torch.save(patchmodel.state_dict(), 'yolopatchmodel.pth')
