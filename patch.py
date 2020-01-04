@@ -3,31 +3,11 @@ import torch.nn.functional as F
 from torch import nn
 from torchvision import models
 
-from core import train, test, SoftmaxFocalLoss, SoftmaxAutoweightedTotalLoss, SoftmaxAutoweightedLoss
-from dataset import RoadDamagePatchDataset as RDPD
+from core import yolotrain,yolotest,train, test, SoftmaxFocalLoss, SoftmaxAutoweightedTotalLoss, SoftmaxAutoweightedLoss, FocalLoss
+from dataset import YOLOcatPatchDataset as YPD
 from dataset import PatchDataset as PD
 
-
-class TrialModel(nn.Module):
-    def __init__(self):
-        super(TrialModel, self).__init__()
-        self.cnn1 = nn.Conv2d(3, 8, 44)
-        self.cnn2 = nn.Conv2d(8, 16, 44)
-        self.cnn3 = nn.Conv2d(16, 32, 42)
-        self.fc = nn.Linear(32, 2)
-
-    def forward(self, x):
-        s = x.shape
-        x = self.cnn1(x)
-        x = F.relu(x)
-        x = self.cnn2(x)
-        x = F.relu(x)
-        x = self.cnn3(x)
-        x = F.relu(x)
-        x = x.view(s[0], -1)
-        x = self.fc(x)
-        x = F.softmax(x, dim=-1)
-        return x
+import os
 
 
 class PatchModel(nn.Module):
@@ -39,6 +19,7 @@ class PatchModel(nn.Module):
         self.fc3 = nn.Linear(16, cls)
 
     def forward(self, x):
+        # with torch.no_grad():
         s = x.shape
         x = x.reshape(-1, *s[-3:])
         x = self.cnn(x)
@@ -50,36 +31,51 @@ class PatchModel(nn.Module):
         x = self.fc3(x)
         return x
 
+class YoloPatchmodel(nn.Module):
+    def __init__(self, cls):
+        super(YoloPatchmodel, self).__init__()
+        self.patchmodel = PatchModel(cls)
+        if os.path.exists('patchmodel.pth'):
+            self.patchmodel.load_state_dict(torch.load('patchmodel.pth'))
+        self.cnn1 = nn.Conv2d(35, 36, 4)
+        self.cnn2 = nn.Conv2d(36, 64, 3)
+        self.cnn3 = nn.Conv2d(64, 128, 3)
+        self.cnn4 = nn.ConvTranspose2d(130, 64, 3)
+        self.cnn5 = nn.ConvTranspose2d(64, 36, 3)
+        self.cnn6 = nn.ConvTranspose2d(36, 35, 4)
 
-class ClassModel(nn.Module):
-    def __init__(self):
-        super(ClassModel, self).__init__()
-        self.patchmodel = PatchModel()
-        self.fc = nn.Linear(1000, 8 * 2)
-        self.cnn1 = nn.Conv2d(2, 6, 3, 1, 1)
-
-    def forward(self, x):
-        s = x.shape
-        # (N,Ws,Hs,C,H,W)
-        x = x.view(-1, *s[-3:])
-        # (N*Ws*Hs,C,H,W)
-        x = self.patchmodel(x)
-        # (N*Ws*Hs,2)
-        x = x.view(*s[:3], 2)
-        # (N,Ws,Hs,2)
+    def forward(self, img, yolo_out_cls_conf):
+        img_shape = img.shape
+        yolo_shape = yolo_out_cls_conf.shape
+        img = img.view(-1, *img_shape[-3:])
+        x = self.patchmodel(img)
+        x = x.view(-1, 6, 6, 2)
         x = x.permute(0, 3, 2, 1)
-        # (N,2,Hs,Ws)
-        x = self.cnn1(x)
-        # (N,Ws,Hs,Cls)
-        return (x + 1) / 2
-
-        # (N,Ws,Hs,Cls,conf)
+        # x:(B,sp,sp,C,H,W)
+        yolo_out_cls_conf = yolo_out_cls_conf.view(-1, 13, 13, 35)
+        yolo_out_cls_conf = yolo_out_cls_conf.permute(0, 3, 2, 1)
+        yolo_out_cls_conf = self.cnn1(yolo_out_cls_conf)
+        yolo_out_cls_conf = F.relu(yolo_out_cls_conf)
+        yolo_out_cls_conf = self.cnn2(yolo_out_cls_conf)
+        yolo_out_cls_conf = F.relu(yolo_out_cls_conf)
+        yolo_out_cls_conf = self.cnn3(yolo_out_cls_conf)
+        # x:(B,6,6,2)
+        x = torch.cat([x, yolo_out_cls_conf], dim=1)
+        x = self.cnn4(x)
+        x = F.relu(x)
+        x = self.cnn5(x)
+        x = F.relu(x)
+        x = self.cnn6(x)
+        x = x.permute(0, 3, 2, 1)
+        x = x.view(-1, 13, 13, 5, 7)
+        x = F.sigmoid(x)
+        return x
 
 
 # load data
 batchsize = 72
-num_epoch = 32
-cls = 5
+num_epoch = 252
+cls = 2
 # rdpd = RDPD(rddbase="All/", patchbase="rdd_patch/", split=(6, 6))
 rdpd = PD('rdd_patch/')
 train_rdd, test_rdd = torch.utils.data.random_split(
@@ -92,16 +88,31 @@ train_rdpd_loader = torch.utils.data.DataLoader(
 test_rdpd_loader = torch.utils.data.DataLoader(
     test_rdd, batch_size=batchsize, shuffle=True
 )
+# TODO load train.txt
+ypd = YPD('/home/hokusei/src/RoadDamageDataset/All/', '/home/hokusei/src/YAD2K/pickle.pkl')
+train_rdd, test_rdd = torch.utils.data.random_split(
+    ypd, [int(len(ypd) * 0.7), len(ypd) - int(len(ypd) * 0.7)]
+)
+
+train_ypd_loader = torch.utils.data.DataLoader(
+    train_rdd, batch_size=4, shuffle=True
+)
+test_ypd_loader = torch.utils.data.DataLoader(
+    test_rdd, batch_size=4, shuffle=True
+)
 # finetuning
 device = "cuda" if torch.cuda.is_available() else "cpu"
+# device='cpu'
 print(device)
 patchmodel = PatchModel(cls).to(device)
-optimizer = torch.optim.Adam(patchmodel.parameters(), lr=1e-5)
-patchlossf = nn.CrossEntropyLoss()
-patchlossf = nn.CrossEntropyLoss(weight=torch.Tensor([0.01, 0.5, 0.33, 0.33, 1]).to(device))
-patchlossf = SoftmaxAutoweightedLoss(cls)
-patchlossf = SoftmaxAutoweightedTotalLoss(cls)
-patchlossf = SoftmaxFocalLoss()
+yolopatchmodel = YoloPatchmodel(cls).to(device)
+optimizer = torch.optim.Adam(patchmodel.parameters())
+# patchlossf = nn.CrossEntropyLoss(weight=torch.Tensor([0.01, 0.5, 0.33, 0.33, 1]).to(device))
+# patchlossf = SoftmaxAutoweightedLoss(cls)
+# patchlossf = SoftmaxAutoweightedTotalLoss(cls)
+# patchlossf = nn.CrossEntropyLoss()
+patchlossf = SoftmaxFocalLoss(gammma=2)
+yolocatpatchlossf = FocalLoss()
 
 
 def patchaccf(target, pred):
@@ -133,8 +144,39 @@ def prmap(target, pred):
     return rmap
 
 
-test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
+from core import readanchors
+from torchvision.ops import nms
+import csv
+
+
+def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.5):
+    boxes = torch.cat([xy * 600, wh * readanchors()], dim=-1)
+    # convert (x,y,w,h) -> (x0,y0,x1,y1)
+    x0 = boxes[:, :, :, :, 0] - boxes[:, :, :, :, 2] / 2
+    y0 = boxes[:, :, :, :, 1] - boxes[:, :, :, :, 3] / 2
+    x1 = boxes[:, :, :, :, 0] + boxes[:, :, :, :, 2] / 2
+    y1 = boxes[:, :, :, :, 1] + boxes[:, :, :, :, 3] / 2
+    boxes = torch.cat([x0, y0, x1, y1], dim=-1)
+    score = clsconf[:, :, :, :-1].max(dim=-1) * clsconf[:, :, :, :, -1]
+    cls = clsconf[:, :, :, :-1].argmax(dim=-1)
+    boxes.view(-1, 4)
+    score.view(-1)
+    ids = nms(boxes, score, 0.5)
+    with open('catyolo.csv', 'w') as f:
+        writer = csv.writer(f)
+        for i in ids:
+            if score[i]>thresh:
+                writer.writerow([imgname[i], cls[i], score[i], boxes[i]])
+
+
+# test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
+##pretraining for patch binary classification
+#for e in range(num_epoch):
+#   train(patchmodel, device, train_rdpd_loader, patchlossf, optimizer, e)
+#   test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
+#   torch.save(patchmodel.state_dict(), 'patchmodel.pth')
+
 for e in range(num_epoch):
-    train(patchmodel, device, train_rdpd_loader, patchlossf, optimizer, e)
-    test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
-torch.save(patchmodel, 'patchmodel.pth')
+    yolotrain(yolopatchmodel, device, train_ypd_loader, yolocatpatchlossf, optimizer, e)
+    yolotest(yolopatchmodel, device, test_ypd_loader, yolocatpatchlossf, patchaccf, nmswritecsv)
+    torch.save(patchmodel.state_dict(), 'yolopatchmodel.pth')

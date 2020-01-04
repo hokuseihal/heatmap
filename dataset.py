@@ -52,8 +52,7 @@ def getbb(basename, xmlbase="All/Annotations/", normalize=True):
             cls = classes.index(obj.find("name").text)
             bb.append((cls, b))
         return bb
-def path2cls(numpath):
-    pass
+
 class PatchDataset(torch.utils.data.Dataset):
     def __init__(self, base, rddbase='All/',in_transform=None,split=(6,6)):
         self.transform = (
@@ -133,8 +132,8 @@ class PatchDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         impath, label = self.imagelist[idx]
         return self.transform(Image.open(impath)), label
-
 '''
+
 # RDD dataset
 classes = ["","","D00", "D01", "D10", "D11", "D20", "D40", "D43", "D44", "D30"]
 num_cls = len(classes)
@@ -247,7 +246,9 @@ def pos2cls_cof(base, pos, imp, sp):
             rcls=cls
     assert rcls!=0
     def capsle(cls):
+        l = [0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0]
         l=[0,1,2,2,2,2,3,4,1,1,1]
+        l = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
         #print(l[cls])
         return l[cls]
     rcls=capsle(rcls)
@@ -256,7 +257,6 @@ def pos2cls_cof(base, pos, imp, sp):
 
 def num2postuple(num, sp):
     return num % sp[0], num // sp[0]
-
 
 #TODO DEBUG
 from loadimg import loadimgsp
@@ -291,3 +291,26 @@ class RoadDamagePatchDataset(torch.utils.data.Dataset):
         # return shape : tensor(Ws,Hs,C)
         im=loadimgsp(self.rddbase + "JPEGImages/" + self.namelist[idx] + ".jpg")
         return im, self.targetl[idx].reshape(-1).long()
+import pickle
+from loadimg import loadimgsp
+from core import xml2clsconf
+class YOLOcatPatchDataset(torch.utils.data.Dataset):
+    def __init__(self,base,pklpath):
+        self.yolooutput=pickle.load(open(pklpath,'rb'))
+        self.base=base
+        self.idlist=[]
+        #check if file exists
+        #generate id list
+        for idx,(imgfile,_,_,_,_ )in enumerate(self.yolooutput):
+            if os.path.exists(self.base+'/Annotations/'+imgfile.split('.')[0]+'.xml'):
+                self.idlist.append(idx)
+
+    def __len__(self):
+        return len(self.idlist)
+
+    def __getitem__(self, idx):
+        image_file, out_box_xy, out_box_wh, out_box_confidence, out_box_cls_probs=self.yolooutput[self.idlist[idx]]
+        out_box_cls_probs=out_box_cls_probs[:,:,:,:,:6]
+        img=loadimgsp(self.base+'JPEGImages/'+image_file)
+        label_clsconf=xml2clsconf(self.base+'/Annotations/'+image_file.split('.')[0]+'.xml',split=13)
+        return img ,np.concatenate([out_box_cls_probs,out_box_confidence],axis=-1),label_clsconf,out_box_xy,out_box_wh,image_file
