@@ -94,7 +94,7 @@ class FocalLoss(torch.nn.Module):
             return _loss**gamma
         loss=self.mse(input,target)
         loss = focal(loss,self.gamma)
-        return loss.mean()
+        return loss.sum()
 
 
 def train(model, device, train_loader, lossf, optimizer, epoch, log_interval=1):
@@ -150,7 +150,7 @@ def test(model, device, test_loader, lossf, accf, prf):
     correct = 0
     rmap = 0
     with torch.no_grad():
-        for data, target in test_loader:
+        for idx,(data, target) in enumerate(test_loader):
             data, target = data.to(device, dtype=torch.float32), target.to(device).reshape(-1)
             output = model(data)
             # sum up batch loss
@@ -160,6 +160,7 @@ def test(model, device, test_loader, lossf, accf, prf):
             pred = output.argmax(dim=-1, keepdim=True)
             correct += accf(target, pred)
             rmap += prf(target, output)
+            print(idx,'/',len(test_loader),end='')
 
     print(
         "Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)".format(
@@ -200,7 +201,7 @@ def readanchors(anchors_path='yolo_anchors.txt'):
         anchors = np.array(anchors).reshape(-1, 2)
         return anchors.astype(np.float32)
 def xml2clsconf(path, split):
-    clsconf = np.zeros((split, split, 5,len(classes) + 1),dtype=np.float32)
+    clsconf = np.zeros((split, split,len(classes) + 1),dtype=np.float32)
     anchors=readanchors()
     try:
         tree = ET.parse(path)
@@ -227,8 +228,8 @@ def xml2clsconf(path, split):
                     anc=nearest(((xmax-xmin)*13/width,(ymax-ymin)*13/height),anchors)
                     spx, spy = int((xmin + xmax) / (2 * width) * split ), \
                                int((ymin + ymax) / (2 * height) * split )
-                    clsconf[spx, spy,anc, classes.index(cls)] = True
-                    clsconf[spx, spy,anc, -1] = True
+                    clsconf[spx, spy, classes.index(cls)] = True
+                    clsconf[spx, spy, -1] = True
 
         return clsconf
 
