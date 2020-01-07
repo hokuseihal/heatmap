@@ -33,7 +33,6 @@ def cal_iou(r, x):
 def cal(mat):
     global realclslist
     diag = mat.diagonal()
-    t = mat.sum(axis=0)
     prediction = diag / preclslist
     recall = diag / realclslist
     f1 = 2 * (recall + prediction) / (recall + prediction)
@@ -84,7 +83,7 @@ def precision_recall():
         for row in reader:
             preclslist[int(row[1])] += 1
             for xml in readxml(row):
-                if cal_iou(row, xml) > 0.5:
+                if cal_iou(row, xml) > 0.1:
                     addresult(row, xml, resultmat)
 
     cal(resultmat)

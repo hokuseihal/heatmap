@@ -10,26 +10,7 @@ from dataset import PatchDataset as PD
 import os
 
 
-class PatchModel(nn.Module):
-    def __init__(self, cls):
-        super(PatchModel, self).__init__()
-        self.cnn = models.mobilenet_v2(pretrained=True)
-        self.fc1 = nn.Linear(1000, 256)
-        self.fc2 = nn.Linear(256, 16)
-        self.fc3 = nn.Linear(16, cls)
-
-    def forward(self, x):
-        # with torch.no_grad():
-        s = x.shape
-        x = x.reshape(-1, *s[-3:])
-        x = self.cnn(x)
-        x = F.relu(x)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.fc2(x)
-        x = F.relu(x)
-        x = self.fc3(x)
-        return x
+from models import PatchModel
 
 
 class YoloPatchmodel(nn.Module):
@@ -88,7 +69,7 @@ train_rdpd_loader = torch.utils.data.DataLoader(
     train_rdd, batch_size=batchsize, shuffle=True
 )
 test_rdpd_loader = torch.utils.data.DataLoader(
-    test_rdd, batch_size=batchsize, shuffle=True
+    test_rdd, batch_size=1, shuffle=True
 )
 train_ypd = YPD('All/', 'pickle.pkl','All/ImageSets/Main/train.txt')
 test_ypd=YPD('All/', 'pickle.pkl','All/ImageSets/Main/val.txt')
@@ -96,11 +77,11 @@ train_ypd_loader = torch.utils.data.DataLoader(
     train_ypd, batch_size=4, shuffle=True
 )
 test_ypd_loader = torch.utils.data.DataLoader(
-    test_ypd, batch_size=4, shuffle=True
+    test_ypd, batch_size=1, shuffle=True
 )
 # finetuning
 device = "cuda" if torch.cuda.is_available() else "cpu"
-# device='cpu'
+device='cpu'
 print(device)
 patchmodel = PatchModel(cls).to(device)
 yolopatchmodel = YoloPatchmodel(cls).to(device)
@@ -147,7 +128,8 @@ from torchvision.ops import nms
 import csv
 
 from cal_score3 import precision_recall
-def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.5):
+def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.1):
+    print(imgname)
     boxes = torch.cat([xy * 600, wh * torch.from_numpy(readanchors())*600/13], dim=-1)
     # convert (x,y,w,h) -> (x0,y0,x1,y1)
     x0 = boxes[:, :, :, :, :, 0] - boxes[:, :, :, :, :, 2] / 2
@@ -159,22 +141,22 @@ def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.5):
     x1 = x1.view(*x1.shape, 1)
     y1 = y1.view(*y1.shape, 1)
     boxes = torch.cat([x0, y0, x1, y1], dim=-1)
-    clsconf=clsconf.view(4,13,13,1,7)
-    clsconf=torch.ones((4,13,13,5,7)).to(device)*clsconf
+    clsconf=clsconf.view(clsconf.shape[0],13,13,1,7)
+    clsconf=torch.ones((clsconf.shape[0],13,13,5,7)).to(device)*clsconf
     score ,cls= clsconf[:, :, :, :,:-1].max(dim=-1)
     score*=clsconf[:,:,:,:,-1]
     boxes=boxes.view(-1, 4)
     score=score.view(-1)
     cls=cls.view(-1,1)
     ids = nms(boxes.cpu(), score.cpu(), 0.5)
-    with open('catyolo.csv', 'w') as f:
+    with open('catyolo.csv', 'a') as f:
         writer = csv.writer(f)
         for i in ids:
             if score[i] > thresh:
                 print(imgname[i//(13*13*5)].split('.')[0], cls[i].item(), score[i].item(), *boxes[i].int().tolist())
                 writer.writerow([imgname[i//(13*13*5)].split('.')[0], cls[i].item(), score[i].item(), *boxes[i].int().tolist()])
 
-# test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
+test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
 ##pretraining for patch binary classification
 # for e in range(num_epoch):
 #   train(patchmodel, device, train_rdpd_loader, patchlossf, optimizer, e)
@@ -182,7 +164,10 @@ def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.5):
 #   torch.save(patchmodel.state_dict(), 'patchmodel.pth')
 
 for e in range(num_epoch):
-    yolotrain(yolopatchmodel, device, train_ypd_loader, yolocatpatchlossf, yolooptimizer, e)
-    torch.save(yolopatchmodel.state_dict(), 'yolopatchmodel.pth')
-    yolotest(yolopatchmodel, device, test_ypd_loader, yolocatpatchlossf, patchaccf, nmswritecsv)
-    precision_recall()
+    #with open('catyolo.csv','w') as f:
+    #    pass
+    #yolotrain(yolopatchmodel, device, train_ypd_loader, yolocatpatchlossf, yolooptimizer, e)
+    #torch.save(yolopatchmodel.state_dict(), 'yolopatchmodel.pth')
+    #yolotest(yolopatchmodel, device, test_ypd_loader, yolocatpatchlossf, patchaccf, nmswritecsv)
+    #precision_recall()
+    exit()

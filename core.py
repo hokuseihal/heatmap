@@ -1,8 +1,21 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import os
+def cal_iou(r, x):
+    if not (r[0] < x[2] and x[0] < r[2] and r[1] < x[3] and x[1] < r[3]):
+        return 0
 
-
+    A = (x[2] - x[0]) * (x[3] - x[1])
+    B = (r[2] - r[0]) * (r[6] - r[1])
+    C = (min(r[2], x[2]) - max(r[0], x[0])) * (min(r[3], x[3]) - max(r[1], x[1]))
+    iou = C / (A + B - C)
+    return iou
+def ospathcat(namelist):
+    s=''
+    for name in s:
+        s=os.path.join(s,name)
+    return s
 class SoftmaxFocalLoss(torch.nn.Module):
     def __init__(self, gammma=2, average=True):
         super(SoftmaxFocalLoss, self).__init__()
@@ -141,7 +154,7 @@ def yolotrain(model, device, train_loader, lossf, optimizer, epoch, log_interval
         if (batch_idx + 1) % log_interval == 0:
             print(f'Train Epoch: {epoch} [{batch_idx:5d}/{len(train_loader)} ({batch_idx/len(train_loader)*100:.0f}%)]\tLoss: {np.mean(tloss)}')
             tloss = []
-
+import time
 def test(model, device, test_loader, lossf, accf, prf):
     # accf:input:*labels,*labels
     #    :return:number of TP
@@ -149,10 +162,13 @@ def test(model, device, test_loader, lossf, accf, prf):
     test_loss = 0
     correct = 0
     rmap = 0
+    tmp=[]
     with torch.no_grad():
         for idx,(data, target) in enumerate(test_loader):
             data, target = data.to(device, dtype=torch.float32), target.to(device).reshape(-1)
+            t=time.time()
             output = model(data)
+            tmp.append(time.time()-t)
             # sum up batch loss
             test_loss += lossf(output, target)
             # get the index of the max log-probability
@@ -160,7 +176,7 @@ def test(model, device, test_loader, lossf, accf, prf):
             pred = output.argmax(dim=-1, keepdim=True)
             correct += accf(target, pred)
             rmap += prf(target, output)
-            print(idx,'/',len(test_loader),end='')
+            #print(idx,'/',len(test_loader),end='')
 
     print(
         "Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)".format(
@@ -174,6 +190,7 @@ def test(model, device, test_loader, lossf, accf, prf):
     print(f'precision:{rmap.diag() / rmap.sum(dim=-1)}\nrecall:{rmap.diag() / rmap.sum(dim=0)}\n\n')
     if (rmap.diag() / rmap.sum(dim=-1))[1]>0.68 and (rmap.diag() / rmap.sum(dim=0))[1]>0.68:
         exit(0)
+    print(np.mean(tmp))
 
 def yolotest(model, device, test_loader, lossf, accf, prf):
     model=model.to(device)

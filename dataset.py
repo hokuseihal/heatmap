@@ -4,18 +4,60 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import torch
 import torch.nn.functional as F
-from PIL import Image
 from torchvision.transforms import Compose
 from torchvision.transforms import Resize
 from torchvision.transforms import ToTensor
-
-
-
+import csv
+from loadimg import loadimgsp
+from PIL import Image
 def noex(path):
     return os.path.splitext(path)[0]
 
+#TODO DEBUG
+class YOLOOutputDataset(torch.utils.data.Dataset):
+    def __init__(self,base,csvpath,size=(128,128),numcls=6,thresh=.5):
 
-# patch dataset
+        self.base=base
+        self.size=size
+        self.thresh=thresh
+        self.numcls=numcls
+        with open(csvpath) as f:
+            csvreader=csv.reader(f)
+            self.yolooutput=[row for row in csvreader]
+        self.transform=Compose([Resize(size),ToTensor()])
+
+    def __len__(self):
+        return len(self.yolooutput)
+    def __getitem__(self, idx):
+        imgname=self.yolooutput[idx][0]
+        cls=int(self.yolooutput[idx][1])
+        prob=float(self.yolooutput[idx][2])
+        x0=int(self.yolooutput[idx][3])
+        y0 = int(self.yolooutput[idx][4])
+        x1 = int(self.yolooutput[idx][5])
+        y1 = int(self.yolooutput[idx][6])
+        img=Image.open(imgname)
+        splitedimg=loadimgsp(img)
+        img=self.transform(img)
+        mapped_box=torch.zeros(self.size)
+        #Attention! (C,H,W)
+        mapped_box[self.numcls,y0:y1,x0:x1]=prob
+        label=self.checkRDD(imgname,(cls,(x0,y0,1,y1)))
+        return img, splitedimg,mapped_box,(cls,prob,x0,y0,1,y1),label
+
+    def checkRDD(self,path,bbox,param='TF'):
+        def calscore(box1,box2):
+            clserror=1
+            iouerror=1
+            cls1,box1=box1
+            cls2, box2 = box2
+            if param=='TF':
+                return (cls1==cls2) and cal_iou(box1,box2)>self.thresh
+        bboxes=getbb(path,normalize=False)
+        scorelist=[calscore(bbox,b) for b in bboxes]
+
+        if param=='TF':
+            return max(scorelist)==True
 
 
 
