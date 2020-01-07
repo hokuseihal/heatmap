@@ -10,8 +10,8 @@ from core import prmap,patchaccf
 from torch.utils.tensorboard import SummaryWriter
 def main():
     writer=SummaryWriter()
-    batchsize = 16
-    num_epoch=1
+    batchsize = 32
+    num_epoch=4
     model_save_path='imgpackmodel.pth'
 
 
@@ -30,14 +30,14 @@ def main():
     #if os.path.exists(model_save_path):
     #    model.load_state_dict(torch.load(model_save_path))
     #    print('load weight')
-    optimizer = torch.optim.Adam(model.parameters(),lr=1e-5)
+    optimizer = torch.optim.Adam(model.parameters())
     lossf=SoftmaxFocalLoss()
     num_epoch=num_epoch*len(train_dataset)//batchsize
     for e in range(num_epoch):
         #train
         model.train()
         # log_interval = len(train_loader)
-        log_interval = 16
+        log_interval = 32
         losslist=[]
         for batch_idx, (img,splittedimg,mappedbox,bbox, target) in enumerate(train_loader):
             img,splittedimg,mappedbox, target = img.to(device), splittedimg.to(device),mappedbox.to(device),target.to(device)
@@ -76,7 +76,7 @@ def main():
                     print(f'precision:{rmap.diag() / rmap.sum(dim=-1)}\nrecall:{rmap.diag() / rmap.sum(dim=0)}\n\n')
                     #TODO show RDD of precision and recall
                     break
-        #torch.save(model.state_dict(), model_save_path)
+        torch.save(model.state_dict(), model_save_path)
 
 
 
