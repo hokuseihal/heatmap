@@ -10,12 +10,15 @@ from torchvision.transforms import ToTensor
 import csv
 from loadimg import loadimgsp
 from PIL import Image
+from core import ospathcat
 
 
 def noex(path):
     return os.path.splitext(path)[0]
 def base(path):
     return path.split('/')[-1].split('.')[0]
+def file(path):
+    return path.split('/')[-1]
 
 
 # TODO DEBUG
@@ -35,7 +38,7 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
         return len(self.yolooutput)
 
     def __getitem__(self, idx):
-        imgname = self.yolooutput[idx][0]
+        imgname = ospathcat([self.base,'JPEGImages',file(self.yolooutput[idx][0])])
         cls = int(self.yolooutput[idx][1])
         prob = float(self.yolooutput[idx][2])
         x0 = int(self.yolooutput[idx][3])

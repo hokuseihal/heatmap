@@ -23,7 +23,7 @@ def cal_iou(r, x):
     return iou
 def ospathcat(namelist):
     s=''
-    for name in s:
+    for name in namelist:
         s=os.path.join(s,name)
     return s
 class SoftmaxFocalLoss(torch.nn.Module):
