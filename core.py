@@ -2,6 +2,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import os
+def patchaccf(target, pred):
+    return pred.eq(target.view_as(pred.long())).sum().item()
+
+def prmap(target, pred):
+    num_cls = pred.shape[-1]
+    numbatch = pred.shape[0]
+    rmap = torch.zeros((num_cls, num_cls))
+    for i in range(numbatch):
+        rmap[target[i], pred[i].argmax()] += 1
+    return rmap
 def cal_iou(r, x):
     if not (r[0] < x[2] and x[0] < r[2] and r[1] < x[3] and x[1] < r[3]):
         return 0

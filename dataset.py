@@ -10,55 +10,66 @@ from torchvision.transforms import ToTensor
 import csv
 from loadimg import loadimgsp
 from PIL import Image
+
+
 def noex(path):
     return os.path.splitext(path)[0]
+def base(path):
+    return path.split('/')[-1].split('.')[0]
 
-#TODO DEBUG
+
+# TODO DEBUG
 class YOLOOutputDataset(torch.utils.data.Dataset):
-    def __init__(self,base,csvpath,size=(128,128),numcls=6,thresh=.5):
+    def __init__(self, base, csvpath, size=(128, 128), numcls=6, iouthresh=.5):
 
-        self.base=base
-        self.size=size
-        self.thresh=thresh
-        self.numcls=numcls
+        self.base = base
+        self.size = size
+        self.iouthresh = iouthresh
+        self.numcls = numcls
         with open(csvpath) as f:
-            csvreader=csv.reader(f)
-            self.yolooutput=[row for row in csvreader]
-        self.transform=Compose([Resize(size),ToTensor()])
+            csvreader = csv.reader(f)
+            self.yolooutput = [row for row in csvreader if int(row[1]) < 6]
+        self.transform = Compose([Resize(size), ToTensor()])
 
     def __len__(self):
         return len(self.yolooutput)
+
     def __getitem__(self, idx):
-        imgname=self.yolooutput[idx][0]
-        cls=int(self.yolooutput[idx][1])
-        prob=float(self.yolooutput[idx][2])
-        x0=int(self.yolooutput[idx][3])
+        imgname = self.yolooutput[idx][0]
+        cls = int(self.yolooutput[idx][1])
+        prob = float(self.yolooutput[idx][2])
+        x0 = int(self.yolooutput[idx][3])
         y0 = int(self.yolooutput[idx][4])
         x1 = int(self.yolooutput[idx][5])
         y1 = int(self.yolooutput[idx][6])
-        img=Image.open(imgname)
-        splitedimg=loadimgsp(img)
-        img=self.transform(img)
-        mapped_box=torch.zeros(self.size)
-        #Attention! (C,H,W)
-        mapped_box[self.numcls,y0:y1,x0:x1]=prob
-        label=self.checkRDD(imgname,(cls,(x0,y0,1,y1)))
-        return img, splitedimg,mapped_box,(cls,prob,x0,y0,1,y1),label
+        # TODO BE VARIABLE
+        img = Image.open(imgname)
+        splitedimg = loadimgsp(imgname)
+        img = self.transform(img)
+        mapped_box = torch.zeros(self.numcls, *self.size)
+        # Attention! (C,H,W)
+        label = self.checkRDD(imgname, (cls, (x0, y0, x1, y1)))
+        x0 = int(x0 * 128 / 600)
+        y0 = int(y0 * 128 / 600)
+        x1 = int(x1 * 128 / 600)
+        y1 = int(y1 * 128 / 600)
+        mapped_box[cls, x0:x1, y0:y1] = prob
+        return img, splitedimg, mapped_box, (cls, prob, x0, y0,x1, y1), int(label)
 
-    def checkRDD(self,path,bbox,param='TF'):
-        def calscore(box1,box2):
-            clserror=1
-            iouerror=1
-            cls1,box1=box1
+    def checkRDD(self, path, bbox, param='TF'):
+        def calscore(box1, box2):
+            clserror = 1
+            iouerror = 1
+            cls1, box1 = box1
             cls2, box2 = box2
-            if param=='TF':
-                return (cls1==cls2) and cal_iou(box1,box2)>self.thresh
-        bboxes=getbb(path,normalize=False)
-        scorelist=[calscore(bbox,b) for b in bboxes]
+            if param == 'TF':
+                return (cls1 == cls2) and cal_iou(box1, box2) > self.iouthresh
 
-        if param=='TF':
-            return max(scorelist)==True
+        bboxes = getbb(base(path), normalize=False)
+        scorelist = [calscore(bbox, b) for b in bboxes]
 
+        if param == 'TF':
+            return max(scorelist) == True
 
 
 def getbb(basename, xmlbase="All/Annotations/", normalize=True):
@@ -95,8 +106,9 @@ def getbb(basename, xmlbase="All/Annotations/", normalize=True):
             bb.append((cls, b))
         return bb
 
+
 class PatchDataset(torch.utils.data.Dataset):
-    def __init__(self, base, rddbase='All/',in_transform=None,split=(6,6)):
+    def __init__(self, base, rddbase='All/', in_transform=None, split=(6, 6)):
         self.transform = (
             Compose([Resize((128, 128)), ToTensor()])
             if in_transform is None
@@ -107,7 +119,7 @@ class PatchDataset(torch.utils.data.Dataset):
         self.negative_road_base = base + "Negative_road/"
         self.imagelist = (
                 [
-                    (self.positive_base + path, pos2cls_cof(rddbase,*(split_head_num(path)),split))
+                    (self.positive_base + path, pos2cls_cof(rddbase, *(split_head_num(path)), split))
                     for path in os.listdir(self.positive_base)
                 ]
                 + [
@@ -127,6 +139,7 @@ class PatchDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         impath, label = self.imagelist[idx]
         return self.transform(Image.open(impath)), label
+
 
 '''
 class PatchDataset(torch.utils.data.Dataset):
@@ -177,7 +190,7 @@ class PatchDataset(torch.utils.data.Dataset):
 '''
 
 # RDD dataset
-classes = ["","","D00", "D01", "D10", "D11", "D20", "D40", "D43", "D44", "D30"]
+classes = ["D00", "D01", "D10", "D11", "D20", "D40", "D43", "D44", "D30"]
 num_cls = len(classes)
 
 '''
@@ -221,6 +234,7 @@ class RDcDataset(torch.utils.data.Dataset):
             return self.transforms(im), r_tensor
 '''
 
+
 def split_head_num(s):
     import re
 
@@ -246,14 +260,17 @@ def pos2posvec(base, imp, pos, sp):
         r_tensor[cls] = 1.0 if isinbox(pos, sp, b) else 0.0
     return r_tensor
 
-c=0
+
+c = 0
+
+
 def cal_iou(boxA, boxB):
     # determine the (x, y)-coordinates of the intersection rectangle
     xA = max(boxA[0], boxB[0])
     yA = max(boxA[1], boxB[1])
     xB = min(boxA[2], boxB[2])
     yB = min(boxA[3], boxB[3])
-    #crash ?
+    # crash ?
     if not (boxA[0] < boxB[2] and boxA[2] > boxB[0] and boxA[1] < boxB[3] and boxA[3] > boxB[1]):
         return 0
     # compute the area of intersection rectangle
@@ -271,37 +288,46 @@ def cal_iou(boxA, boxB):
 
     # return the intersection over union value
     return iou
-def pos2coor(pos,sp):
-    x,y=num2postuple(pos,sp)
-    return (x/sp[0],y/sp[1],(x+1)/sp[0],(y+1)/sp[1])
+
+
+def pos2coor(pos, sp):
+    x, y = num2postuple(pos, sp)
+    return (x / sp[0], y / sp[1], (x + 1) / sp[0], (y + 1) / sp[1])
+
+
 def pos2cls_cof(base, pos, imp, sp):
     global c
     basename = imp.split(".")[0]
     bb = getbb(basename, xmlbase=base + "Annotations/")
-    preiou=0
-    rcls=1
+    preiou = 0
+    rcls = 1
     for cls, b in bb:
-        iou=cal_iou(b,pos2coor(pos,sp))
-        if preiou<iou:
-            if preiou!=0:c+=1
-            preiou=iou
-            rcls=cls
-    assert rcls!=0
+        iou = cal_iou(b, pos2coor(pos, sp))
+        if preiou < iou:
+            if preiou != 0: c += 1
+            preiou = iou
+            rcls = cls
+    assert rcls != 0
+
     def capsle(cls):
         l = [0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0]
-        l=[0,1,2,2,2,2,3,4,1,1,1]
+        l = [0, 1, 2, 2, 2, 2, 3, 4, 1, 1, 1]
         l = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-        #print(l[cls])
+        # print(l[cls])
         return l[cls]
-    rcls=capsle(rcls)
+
+    rcls = capsle(rcls)
     return rcls
 
 
 def num2postuple(num, sp):
     return num % sp[0], num // sp[0]
 
-#TODO DEBUG
+
+# TODO DEBUG
 from loadimg import loadimgsp
+
+
 class RoadDamagePatchDataset(torch.utils.data.Dataset):
     def __init__(self, rddbase, patchbase, split):
         assert isinstance(split, tuple), "argment sp's type must be TUPLE."
@@ -331,23 +357,28 @@ class RoadDamagePatchDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         # return shape : tensor(Ws,Hs,C)
-        im=loadimgsp(self.rddbase + "JPEGImages/" + self.namelist[idx] + ".jpg")
+        im = loadimgsp(self.rddbase + "JPEGImages/" + self.namelist[idx] + ".jpg")
         return im, self.targetl[idx].reshape(-1).long()
+
+
 import pickle
 from loadimg import loadimgsp
 from core import xml2clsconf
+
+
 class YOLOcatPatchDataset(torch.utils.data.Dataset):
-    def __init__(self,base,pklpath,txtpath):
-        self.yolooutput=pickle.load(open(pklpath,'rb'))
-        self.base=base
-        self.idlist=[]
-        #check if file exists
-        #generate id list
+    def __init__(self, base, pklpath, txtpath):
+        self.yolooutput = pickle.load(open(pklpath, 'rb'))
+        self.base = base
+        self.idlist = []
+        # check if file exists
+        # generate id list
         with open(txtpath) as f:
-            rows=f.readlines()
-        rows=list(map(lambda s:s.strip(),rows))
-        for idx,(imgfile,_,_,_,_ )in enumerate(self.yolooutput):
-            if os.path.exists(self.base+'/Annotations/'+imgfile.split('.')[0]+'.xml') and imgfile.split('.')[0] in rows:
+            rows = f.readlines()
+        rows = list(map(lambda s: s.strip(), rows))
+        for idx, (imgfile, _, _, _, _) in enumerate(self.yolooutput):
+            if os.path.exists(self.base + '/Annotations/' + imgfile.split('.')[0] + '.xml') and imgfile.split('.')[
+                0] in rows:
                 self.idlist.append(idx)
         print(f'YOLOcat:{len(self)}')
 
@@ -355,8 +386,9 @@ class YOLOcatPatchDataset(torch.utils.data.Dataset):
         return len(self.idlist)
 
     def __getitem__(self, idx):
-        image_file, out_box_xy, out_box_wh, out_box_confidence, out_box_cls_probs=self.yolooutput[self.idlist[idx]]
-        out_box_cls_probs=out_box_cls_probs[:,:,:,:,:6]
-        img=loadimgsp(self.base+'JPEGImages/'+image_file)
-        label_clsconf=xml2clsconf(self.base+'/Annotations/'+image_file.split('.')[0]+'.xml',split=13)
-        return img ,np.concatenate([out_box_cls_probs,out_box_confidence],axis=-1),label_clsconf,out_box_xy,out_box_wh,image_file
+        image_file, out_box_xy, out_box_wh, out_box_confidence, out_box_cls_probs = self.yolooutput[self.idlist[idx]]
+        out_box_cls_probs = out_box_cls_probs[:, :, :, :, :6]
+        img = loadimgsp(self.base + 'JPEGImages/' + image_file)
+        label_clsconf = xml2clsconf(self.base + '/Annotations/' + image_file.split('.')[0] + '.xml', split=13)
+        return img, np.concatenate([out_box_cls_probs, out_box_confidence],
+                                   axis=-1), label_clsconf, out_box_xy, out_box_wh, image_file

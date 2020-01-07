@@ -94,8 +94,7 @@ patchlossf = SoftmaxFocalLoss(gammma=2)
 yolocatpatchlossf = FocalLoss()
 
 
-def patchaccf(target, pred):
-    return pred.eq(target.view_as(pred.long())).sum().item()
+from core import patchaccf
 
 
 def rdcaccf(target, pred, limit=0.5):
@@ -113,14 +112,7 @@ def rdcaccf(target, pred, limit=0.5):
         ]
     )
 
-
-def prmap(target, pred):
-    num_cls = pred.shape[-1]
-    numbatch = pred.shape[0]
-    rmap = torch.zeros((num_cls, num_cls))
-    for i in range(numbatch):
-        rmap[target[i], pred[i].argmax()] += 1
-    return rmap
+from core import prmap
 
 
 from core import readanchors
