@@ -2,7 +2,7 @@ import csv
 import xml.etree.ElementTree as ET
 import numpy as np
 
-filename = 'catyolo.csv'
+
 dataroot = 'All/Annotations'
 classes = ['D00', 'D01', 'D10', 'D11', 'D20', 'D40', 'D43', 'D44', 'D30']
 resultmat = np.zeros((len(classes), len(classes)), dtype=int)
@@ -11,6 +11,7 @@ preclslist = np.zeros(len(classes), dtype=int)
 seenlist = []
 fp = 0
 n = 0
+from dataset import base
 
 
 def cal_iou(r, x):
@@ -48,7 +49,7 @@ def readxml(r):
     global readclslist
     r_list = []
     try:
-        tree = ET.parse(dataroot + '/' + r[0] + '.xml')
+        tree = ET.parse(dataroot + '/' + base(r[0]) + '.xml')
 
         root = tree.getroot()
         for child in root.iter('object'):
@@ -76,11 +77,25 @@ def addresult(r, x, mat):
     mat[x_index, r_index] += 1
 
 
-def precision_recall():
+def precision_recall(filename,lookinglist=None):
+    global resultmat
+    global realclslist
+    global preclslist
+    global seenlist
+    global fp
+    global n
+    resultmat = np.zeros((len(classes), len(classes)), dtype=int)
+    realclslist = np.zeros(len(classes), dtype=int)
+    preclslist = np.zeros(len(classes), dtype=int)
+    seenlist = []
+    fp = 0
+    n = 0
     with open(filename) as f:
         reader = csv.reader(f)
 
-        for row in reader:
+        for idx,row in enumerate(reader):
+            if (lookinglist is not None) and (not lookinglist[idx]):
+                continue
             preclslist[int(row[1])] += 1
             for xml in readxml(row):
                 if cal_iou(row, xml) > 0.1:
@@ -90,4 +105,4 @@ def precision_recall():
 
 
 if __name__ == '__main__':
-    precision_recall()
+    precision_recall('result_test_001.csv')

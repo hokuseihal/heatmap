@@ -21,7 +21,6 @@ def file(path):
     return path.split('/')[-1]
 
 
-# TODO DEBUG
 class YOLOOutputDataset(torch.utils.data.Dataset):
     def __init__(self, base, csvpath, size=(128, 128), numcls=6, iouthresh=.5):
 
@@ -57,7 +56,7 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
         x1 = int(x1 * 128 / 600)
         y1 = int(y1 * 128 / 600)
         mapped_box[cls, x0:x1, y0:y1] = prob
-        return img, splitedimg, mapped_box, (cls, prob, x0, y0,x1, y1), int(label)
+        return img, splitedimg, mapped_box, (cls, prob, x0, y0,x1, y1), int(label),idx
 
     def checkRDD(self, path, bbox, param='TF'):
         def calscore(box1, box2):
