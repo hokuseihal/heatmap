@@ -40,22 +40,21 @@ def main():
     for e in range(num_epoch):
         # train
         model.train()
-        # log_interval = len(train_loader)
+        #log_interval = len(train_loader)
         log_interval = 32
         losslist = []
-        # for batch_idx, (img,splittedimg,mappedbox,bbox, target,idx) in enumerate(train_loader):
-        #    img,splittedimg,mappedbox, target = img.to(device), splittedimg.to(device),mappedbox.to(device),target.to(device)
-        #    optimizer.zero_grad()
-        #    output = model(img,splittedimg,bbox,mappedbox)
-        #    loss = lossf(output, target)
-        #    loss.backward()
-        #    optimizer.step()
-        #    writer.add_scalar('Loss:Train',loss.item(),e)
-        #    losslist.append(loss.item())
-        #    if (batch_idx + 1) % log_interval == 0:
-        #        print(f'Train Epoch: {e} [{batch_idx*batchsize}/{len(train_loader.dataset)} ({100.0 * batch_idx / len(train_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
-        #        losslist=[]
-        #        break
+        #for batch_idx, (img,splittedimg,mappedbox,bbox, target,idx) in enumerate(train_loader):
+        #   img,splittedimg,mappedbox, target = img.to(device), splittedimg.to(device),mappedbox.to(device),target.to(device)
+        #   optimizer.zero_grad()
+        #   output = model(img,splittedimg,bbox,mappedbox)
+        #   loss = lossf(output, target)
+        #   loss.backward()
+        #   optimizer.step()
+        #   writer.add_scalar('Loss:Train',loss.item(),e)
+        #   losslist.append(loss.item())
+        #   if (batch_idx + 1) % log_interval == 0:
+        #       print(f'Train Epoch: {e} [{batch_idx*batchsize}/{len(train_loader.dataset)} ({100.0 * batch_idx / len(train_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
+        #       break
         # test
         losslist = []
         correct = 0
@@ -63,6 +62,7 @@ def main():
         thresh = .5
         oklist = np.zeros(len(test_dataset))
         for batch_idx, (img, splittedimg, mappedbox, bbox, target, idx) in enumerate(test_loader):
+            log_interval=len(test_loader)
             with torch.no_grad():
                 img, splittedimg, mappedbox, target = img.to(device), splittedimg.to(device), mappedbox.to(
                     device), target.to(device)
@@ -79,11 +79,11 @@ def main():
                 biggerprob = bbox[1] > thresh
                 oklist[idx]=((pred.view(-1).cpu()==1) | biggerprob).numpy()
                 if (batch_idx + 1) % log_interval == 0:
-                    print(f'Test Epoch: {e} [{batch_idx}/{len(train_loader)} ({100.0 * batch_idx / len(train_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
+                    print(f'Test Epoch: {e} [{batch_idx}/{len(train_loader)} ({100.0 * batch_idx / len(test_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
                     losslist = []
-                    print(f'precision:{rmap.diag() / rmap.sum(dim=-1)}\nrecall:{rmap.diag() / rmap.sum(dim=0)}\n\n')
+                    print(f'precision:{rmap.diag() / rmap.sum(dim=-1)}\nrecall:{rmap.diag() / rmap.sum(dim=0)}')
                     precision_recall(testcsv,oklist)
-
+        exit(1)
         torch.save(model.state_dict(), model_save_path)
 
 
