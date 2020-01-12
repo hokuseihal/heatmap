@@ -43,18 +43,18 @@ def main():
         #log_interval = len(train_loader)
         log_interval = 32
         losslist = []
-        #for batch_idx, (img,splittedimg,mappedbox,bbox, target,idx) in enumerate(train_loader):
-        #   img,splittedimg,mappedbox, target = img.to(device), splittedimg.to(device),mappedbox.to(device),target.to(device)
-        #   optimizer.zero_grad()
-        #   output = model(img,splittedimg,bbox,mappedbox)
-        #   loss = lossf(output, target)
-        #   loss.backward()
-        #   optimizer.step()
-        #   writer.add_scalar('Loss:Train',loss.item(),e)
-        #   losslist.append(loss.item())
-        #   if (batch_idx + 1) % log_interval == 0:
-        #       print(f'Train Epoch: {e} [{batch_idx*batchsize}/{len(train_loader.dataset)} ({100.0 * batch_idx / len(train_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
-        #       break
+        for batch_idx, (img,splittedimg,mappedbox,bbox, target,idx) in enumerate(train_loader):
+           img,splittedimg,mappedbox, target = img.to(device), splittedimg.to(device),mappedbox.to(device),target.to(device)
+           optimizer.zero_grad()
+           output = model(img,splittedimg,bbox,mappedbox)
+           loss = lossf(output, target)
+           loss.backward()
+           optimizer.step()
+           writer.add_scalar('Loss:Train',loss.item(),e)
+           losslist.append(loss.item())
+           if (batch_idx + 1) % log_interval == 0:
+               print(f'Train Epoch: {e} [{batch_idx*batchsize}/{len(train_loader.dataset)} ({100.0 * batch_idx / len(train_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
+               break
         # test
         losslist = []
         correct = 0
@@ -83,7 +83,7 @@ def main():
                     losslist = []
                     print(f'precision:{rmap.diag() / rmap.sum(dim=-1)}\nrecall:{rmap.diag() / rmap.sum(dim=0)}')
                     precision_recall(testcsv,oklist)
-        exit(1)
+        #exit(1)
         torch.save(model.state_dict(), model_save_path)
 
 

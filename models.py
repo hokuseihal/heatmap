@@ -24,23 +24,27 @@ def vec2img(vec,size,sp):
 class ImgPackModel(nn.Module):
     def __init__(self):
         super(ImgPackModel,self).__init__()
-        self.biclsmodel=PatchModel(2)
-        patchmodelsavedpath='patchmodel.pth'
-        if os.path.exists(patchmodelsavedpath):
-            self.biclsmodel.load_state_dict(torch.load(patchmodelsavedpath))
-            print('load',patchmodelsavedpath)
+        #self.biclsmodel=PatchModel(2)
+        #patchmodelsavedpath='patchmodel.pth'
+        #if os.path.exists(patchmodelsavedpath):
+        #    self.biclsmodel.load_state_dict(torch.load(patchmodelsavedpath))
+        #    print('load',patchmodelsavedpath)
 
-        self.feature=models.MobileNetV2(11)
+        self.feature=models.MobileNetV2(9)
+        #self.cnn1=nn.Conv2d(cls,8)
+        #self.cnn2=nn.Conv2d(8,4)
+        #self.cnn=nn.Conv2d(4,2)
         self.classifier = nn.Sequential(
             nn.Dropout(0.2),
             nn.Linear(1000, 2),
         )
 
     def forward(self,img,splittedimg,bbox,mappedbox):
-        with torch.no_grad():
-            splittedimg=self.biclsmodel(splittedimg)
-        splittedimg=vec2img(splittedimg,128,6)
-        x=torch.cat([mappedbox,splittedimg,img],dim=1)
+        #with torch.no_grad():
+        #    splittedimg=self.biclsmodel(splittedimg)
+        #splittedimg=vec2img(splittedimg,128,6)
+        #x=torch.cat([mappedbox,splittedimg,img],dim=1)
+        x = torch.cat([mappedbox, img], dim=1)
         x=self.feature(x)
         x=self.classifier(x)
         return x
