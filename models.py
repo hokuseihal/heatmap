@@ -30,7 +30,7 @@ class ImgPackModel(nn.Module):
         #    self.biclsmodel.load_state_dict(torch.load(patchmodelsavedpath))
         #    print('load',patchmodelsavedpath)
 
-        self.feature=models.MobileNetV2(9)
+        self.feature=models.MobileNetV2(3)
         #self.cnn1=nn.Conv2d(cls,8)
         #self.cnn2=nn.Conv2d(8,4)
         #self.cnn=nn.Conv2d(4,2)
@@ -44,7 +44,8 @@ class ImgPackModel(nn.Module):
         #    splittedimg=self.biclsmodel(splittedimg)
         #splittedimg=vec2img(splittedimg,128,6)
         #x=torch.cat([mappedbox,splittedimg,img],dim=1)
-        x = torch.cat([mappedbox, img], dim=1)
+        #x = torch.cat([mappedbox, img], dim=1)
+        x=img
         x=self.feature(x)
         x=self.classifier(x)
         return x
