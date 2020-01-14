@@ -22,7 +22,7 @@ def file(path):
 
 
 class YOLOOutputDataset(torch.utils.data.Dataset):
-    def __init__(self, base, csvpath, size=(256, 256), numcls=6, iouthresh=.5):
+    def __init__(self, base, csvpath, size=(512, 512), numcls=6, iouthresh=.5):
 
         self.base = base
         self.size = size

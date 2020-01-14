@@ -13,7 +13,7 @@ from cal_score5 import precision_recall
 
 def main():
     writer = SummaryWriter()
-    batchsize = 32
+    batchsize = 8
     num_epoch = 1
     model_save_path = 'imgpackmodel.pth'
     testcsv = 'result_test_001.csv'
