@@ -34,14 +34,14 @@ def main():
     if os.path.exists(model_save_path):
         model.load_state_dict(torch.load(model_save_path))
         print('load weight')
-    optimizer = torch.optim.Adam(model.parameters())
+    optimizer = torch.optim.Adam(model.parameters(),lr=1e-5)
     lossf = SoftmaxFocalLoss()
     num_epoch = num_epoch * len(train_dataset) // batchsize
     for e in range(num_epoch):
         # train
         model.train()
-        # log_interval = len(train_loader)
-        log_interval = 32
+        # log_interval = len(train1/(1/precision+1/recall)_loader)
+        log_interval = 8
         losslist = []
         for batch_idx, (img, splittedimg, mappedbox, bbox, target, idx) in enumerate(train_loader):
             img, splittedimg, mappedbox, target = img.to(device), splittedimg.to(device), mappedbox.to(
