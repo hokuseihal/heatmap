@@ -4,7 +4,7 @@ from core import readxml, classname
 from cal_score3 import cal_iou
 
 
-def precision_recall(oklist=None,csvfilename='y2rresult_001.csv', iou_thresh=.5):
+def precision_recall(csvfilename='y2rresult_001.csv',oklist=None, iou_thresh=.5):
     detect_dic = {}
     tp = np.zeros(len(classname))
     fp = np.zeros(len(classname))
