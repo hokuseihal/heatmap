@@ -33,7 +33,7 @@ def main():
     model = Model().to(device)
     if os.path.exists(model_save_path):
         model.load_state_dict(torch.load(model_save_path))
-        print('load weight')
+        print('load main weight')
     optimizer = torch.optim.Adam(model.parameters(),lr=1e-5)
     lossf = SoftmaxFocalLoss()
     num_epoch = num_epoch * len(train_dataset) // batchsize
