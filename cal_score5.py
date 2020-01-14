@@ -14,6 +14,8 @@ def precision_recall(csvfilename='y2rresult_001.csv',oklist=None, iou_thresh=.5)
         for idx,csv_detect_row in enumerate(reader):
             if oklist is None or oklist[idx]:
                 detect_dic.setdefault(csv_detect_row[0], []).append(csv_detect_row)
+            else:
+                detect_dic.setdefault(csv_detect_row[0], [])
     for detectfilename in detect_dic:
         detections_on_img = detect_dic[detectfilename]
         detections_on_img_id = np.zeros(len(detections_on_img))
@@ -41,6 +43,7 @@ def precision_recall(csvfilename='y2rresult_001.csv',oklist=None, iou_thresh=.5)
         if len(_tpfn) != 0:
             tpfn += _tpfn.reshape(len(classname))
     # if map:cal map here #recall is tp-all(all)
+
     precision=(tp / (tp + fp))[:6]
     recall=(tp / (tpfn))[:6]
     print(f'precision:{precision}')

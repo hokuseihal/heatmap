@@ -13,7 +13,7 @@ from cal_score5 import precision_recall
 
 def main():
     writer = SummaryWriter()
-    batchsize = 64
+    batchsize = 32
     num_epoch = 1
     model_save_path = 'imgpackmodel.pth'
     testcsv = 'result_test_001.csv'
@@ -35,7 +35,7 @@ def main():
         model.load_state_dict(torch.load(model_save_path))
         print('load main weight')
     optimizer = torch.optim.Adam(model.parameters())
-    lossf = SoftmaxFocalLoss(gammma=5)
+    lossf = SoftmaxFocalLoss(gammma=0)
     num_epoch = num_epoch * len(train_dataset) // batchsize
     for e in range(num_epoch):
         # train
