@@ -30,7 +30,7 @@ class ImgPackModel(nn.Module):
             self.biclsmodel.load_state_dict(torch.load(patchmodelsavedpath))
             print('load',patchmodelsavedpath)
 
-        self.feature=models.MobileNetV2(3)
+        self.feature=models.MobileNetV2(11)
         #self.cnn1=nn.Conv2d(cls,8)
         #self.cnn2=nn.Conv2d(8,4)
         #self.cnn=nn.Conv2d(4,2)
