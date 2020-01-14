@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import os
 classname = ['D00', 'D01', 'D10', 'D11', 'D20', 'D40', 'D43', 'D44', 'D30']
 def readxml(filename,root='All/Annotations/'):
-    filename=root+filename.split('/')[-1].split('.')[0]+'.xml'
+    filename=root+filename.strip().split('/')[-1].split('.')[0]+'.xml'
     global readclslist
     r_list = []
     try:

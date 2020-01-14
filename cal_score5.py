@@ -4,7 +4,7 @@ from core import readxml, classname
 from cal_score3 import cal_iou
 
 
-def precision_recall(csvfilename='y2rresult_001.csv',oklist=None, iou_thresh=.5):
+def precision_recall(csvfilename='y2rresult_050.csv',oklist=None, iou_thresh=.5):
     detect_dic = {}
     tp = np.zeros(len(classname))
     fp = np.zeros(len(classname))
@@ -35,13 +35,19 @@ def precision_recall(csvfilename='y2rresult_001.csv',oklist=None, iou_thresh=.5)
         # if map : add dets if id==1
         _tp = np.eye(len(classname))[detections_on_img_id_cls][detections_on_img_id == 1].sum(axis=0)
         _fp = np.eye(len(classname))[detections_on_img_id_cls][detections_on_img_id == 0].sum(axis=0)
-        _tpfn = np.eye(len(classname))[ground_truth_on_img_id_cls].sum(axis=0)
+        #_tpfn = np.eye(len(classname))[ground_truth_on_img_id_cls].sum(axis=0)
         if len(_tp) != 0:
             tp += _tp.reshape(len(classname))
         if len(_fp) != 0:
             fp += _fp.reshape(len(classname))
-        if len(_tpfn) != 0:
-            tpfn += _tpfn.reshape(len(classname))
+        #if len(_tpfn) != 0:
+        #    tpfn += _tpfn.reshape(len(classname))
+    valtxt='val.txt'
+    with open(valtxt) as f:
+        for xmlfile in f.readlines():
+            bbx=readxml(xmlfile)
+            for bb in bbx:
+                tpfn[bb[-1]]+=1
     # if map:cal map here #recall is tp-all(all)
 
     precision=(tp / (tp + fp))[:6]
