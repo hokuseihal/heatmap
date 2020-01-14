@@ -1,17 +1,9 @@
 import torch
 import torch.nn as nn
-from torchvision import models
+from mobilenet import mobilenet_v2,MobileNetV2
 import torch.nn.functional as F
 import numpy  as np
 import os
-class ConvBNReLU(nn.Sequential):
-    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, groups=1):
-        padding = (kernel_size - 1) // 2
-        super(ConvBNReLU, self).__init__(
-            nn.Conv2d(in_planes, out_planes, kernel_size, stride, padding, groups=groups, bias=False),
-            nn.BatchNorm2d(out_planes),
-            nn.ReLU6(inplace=True)
-        )
 def vec2img(vec,size,sp):
     #ATTENNTION!!(C,H,W)
     c=vec.shape[-1]
@@ -30,7 +22,7 @@ class ImgPackModel(nn.Module):
             self.biclsmodel.load_state_dict(torch.load(patchmodelsavedpath))
             print('load',patchmodelsavedpath)
 
-        self.feature=models.MobileNetV2(11)
+        self.feature=MobileNetV2(9)
         #self.cnn1=nn.Conv2d(cls,8)
         #self.cnn2=nn.Conv2d(8,4)
         #self.cnn=nn.Conv2d(4,2)
@@ -40,11 +32,11 @@ class ImgPackModel(nn.Module):
         )
 
     def forward(self,img,splittedimg,bbox,mappedbox):
-        with torch.no_grad():
-            splittedimg=self.biclsmodel(splittedimg)
-        splittedimg=vec2img(splittedimg,128,6)
-        x=torch.cat([mappedbox,splittedimg,img],dim=1)
-        #x = torch.cat([mappedbox, img], dim=1)
+        #with torch.no_grad():
+        #    splittedimg=self.biclsmodel(splittedimg)
+        #splittedimg=vec2img(splittedimg,128,6)
+        #x=torch.cat([mappedbox,splittedimg,img],dim=1)
+        x = torch.cat([mappedbox, img], dim=1)
         #x=img
         x=self.feature(x)
         x=self.classifier(x)
@@ -53,7 +45,7 @@ class ImgPackModel(nn.Module):
 class PatchModel(nn.Module):
     def __init__(self, cls):
         super(PatchModel, self).__init__()
-        self.cnn = models.mobilenet_v2(pretrained=True)
+        self.cnn = mobilenet_v2(pretrained=False)
         self.fc1 = nn.Linear(1000, 256)
         self.fc2 = nn.Linear(256, 16)
         self.fc3 = nn.Linear(16, cls)

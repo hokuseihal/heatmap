@@ -13,7 +13,7 @@ from cal_score5 import precision_recall
 
 def main():
     writer = SummaryWriter()
-    batchsize = 16
+    batchsize = 64
     num_epoch = 1
     model_save_path = 'imgpackmodel.pth'
     testcsv = 'result_test_001.csv'
@@ -34,13 +34,13 @@ def main():
     if os.path.exists(model_save_path):
         model.load_state_dict(torch.load(model_save_path))
         print('load main weight')
-    optimizer = torch.optim.Adam(model.parameters(),lr=1e-5)
-    lossf = SoftmaxFocalLoss()
+    optimizer = torch.optim.Adam(model.parameters())
+    lossf = SoftmaxFocalLoss(gammma=5)
     num_epoch = num_epoch * len(train_dataset) // batchsize
     for e in range(num_epoch):
         # train
         model.train()
-        # log_interval = len(train1/(1/precision+1/recall)_loader)
+        # log_interval = len(train_loader)
         log_interval = 8
         losslist = []
         for batch_idx, (img, splittedimg, mappedbox, bbox, target, idx) in enumerate(train_loader):
@@ -63,7 +63,6 @@ def main():
         thresh = .5
         oklist = np.zeros(len(test_dataset))
         for batch_idx, (img, splittedimg, mappedbox, bbox, target, idx) in enumerate(test_loader):
-            log_interval = len(test_loader)
             with torch.no_grad():
                 img, splittedimg, mappedbox, target = img.to(device), splittedimg.to(device), mappedbox.to(
                     device), target.to(device)
@@ -79,11 +78,10 @@ def main():
                 rmap += prmap(target, output)
                 biggerprob = bbox[1] > thresh
                 oklist[idx] = ((pred.view(-1).cpu() == 1) | biggerprob).numpy()
-                if (batch_idx + 1) % log_interval == 0:
-                    print(f'Test Epoch: {e} [{batch_idx}/{len(train_loader)} ({100.0 * batch_idx / len(test_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
-                    losslist = []
-                    print(f'precision:{rmap.diag() / rmap.sum(dim=-1)}\nrecall:{rmap.diag() / rmap.sum(dim=0)}')
-                    precision_recall(testcsv, oklist)
+
+        print(f'Test Epoch: {e} [{batch_idx}/{len(train_loader)} ({100.0 * batch_idx / len(test_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
+        print(f'precision:{rmap.diag() / rmap.sum(dim=-1)}\nrecall:{rmap.diag() / rmap.sum(dim=0)}')
+        precision_recall(testcsv, oklist)
         # exit(1)
         torch.save(model.state_dict(), model_save_path)
 

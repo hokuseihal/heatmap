@@ -46,7 +46,8 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
         y1 = int(self.yolooutput[idx][6])
         # TODO BE VARIABLE
         img = Image.open(imgname)
-        splitedimg = loadimgsp(imgname)
+        #splitedimg = loadimgsp(imgname)
+        splitedimg=torch.zeros(1)
         img = self.transform(img)
         mapped_box = torch.zeros(self.numcls, *self.size)
         # Attention! (C,H,W)
