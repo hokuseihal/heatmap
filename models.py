@@ -24,11 +24,11 @@ def vec2img(vec,size,sp):
 class ImgPackModel(nn.Module):
     def __init__(self):
         super(ImgPackModel,self).__init__()
-        #self.biclsmodel=PatchModel(2)
-        #patchmodelsavedpath='patchmodel.pth'
-        #if os.path.exists(patchmodelsavedpath):
-        #    self.biclsmodel.load_state_dict(torch.load(patchmodelsavedpath))
-        #    print('load',patchmodelsavedpath)
+        self.biclsmodel=PatchModel(2)
+        patchmodelsavedpath='patchmodel.pth'
+        if os.path.exists(patchmodelsavedpath):
+            self.biclsmodel.load_state_dict(torch.load(patchmodelsavedpath))
+            print('load',patchmodelsavedpath)
 
         self.feature=models.MobileNetV2(3)
         #self.cnn1=nn.Conv2d(cls,8)
