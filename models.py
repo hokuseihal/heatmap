@@ -40,12 +40,12 @@ class ImgPackModel(nn.Module):
         )
 
     def forward(self,img,splittedimg,bbox,mappedbox):
-        #with torch.no_grad():
-        #    splittedimg=self.biclsmodel(splittedimg)
-        #splittedimg=vec2img(splittedimg,128,6)
-        #x=torch.cat([mappedbox,splittedimg,img],dim=1)
+        with torch.no_grad():
+            splittedimg=self.biclsmodel(splittedimg)
+        splittedimg=vec2img(splittedimg,128,6)
+        x=torch.cat([mappedbox,splittedimg,img],dim=1)
         #x = torch.cat([mappedbox, img], dim=1)
-        x=img
+        #x=img
         x=self.feature(x)
         x=self.classifier(x)
         return x
