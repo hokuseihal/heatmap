@@ -7,10 +7,10 @@ from PIL import Image
 
 classes = ["D00", "D01", "D10", "D11", "D20", "D40", "D43", "D44", "D30", "", "", ""]
 valtxtpath = "All/ImageSets/Main/val.txt"
-filename = "csv/detection_own_yolo_out_val.csv"
+filename = "y2rresult_050.csv"
 dataroot = "All/Annotations/"
 labelpath = "All/labels/"
-imagefolder = "All/JPEGimages/"
+imagefolder = "All/JPEGImages/"
 n = 0
 
 
@@ -36,7 +36,7 @@ def readxml(r):
 
 def readlabel(name):
     r = []
-    name = labelpath+name.split('/')[-1].split('.')[0]+'txt'
+    label = labelpath+name.split('/')[-1].split('.')[0]+'.txt'
     # read csv
     data = np.loadtxt(label, delimiter=" ")
     # get image shape
@@ -55,6 +55,7 @@ def readlabel(name):
         # return
         return r
     except IndexError:
+        print('Index Error')
         return []
 
 

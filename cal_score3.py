@@ -88,6 +88,7 @@ def precision_recall(filename,lookinglist=None):
     realclslist = np.zeros(len(classes), dtype=int)
     preclslist = np.zeros(len(classes), dtype=int)
     seenlist = []
+    detectionlist=[]
     fp = 0
     n = 0
     with open(filename) as f:
@@ -105,4 +106,4 @@ def precision_recall(filename,lookinglist=None):
 
 
 if __name__ == '__main__':
-    precision_recall('result_test_001.csv')
+    precision_recall('y2rresult_050.csv')

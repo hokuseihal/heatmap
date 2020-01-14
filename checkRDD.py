@@ -8,7 +8,7 @@ from core import train, test, SoftmaxFocalLoss
 import numpy as np
 from core import prmap, patchaccf
 from torch.utils.tensorboard import SummaryWriter
-from cal_score3 import precision_recall
+from cal_score5 import precision_recall
 
 
 def main():

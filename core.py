@@ -2,6 +2,27 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import os
+classname = ['D00', 'D01', 'D10', 'D11', 'D20', 'D40', 'D43', 'D44', 'D30']
+def readxml(filename,root='All/Annotations/'):
+    filename=root+filename.split('/')[-1].split('.')[0]+'.xml'
+    global readclslist
+    r_list = []
+    try:
+        tree = ET.parse(filename)
+
+        root = tree.getroot()
+        for child in root.iter('object'):
+            for object in child:
+                if 'name' == object.tag:
+                    cls = object.text
+
+                if 'bndbox' == object.tag:
+                    r_list.append([int(xy.text) for xy in object] + [classname.index(cls)])
+        return r_list
+
+    except FileNotFoundError:
+        print(f'{filename} is not Found')
+        return []
 def patchaccf(target, pred):
     return pred.eq(target.view_as(pred.long())).sum().item()
 
