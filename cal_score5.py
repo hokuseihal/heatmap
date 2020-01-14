@@ -44,9 +44,9 @@ def precision_recall(csvfilename='y2rresult_001.csv',oklist=None, iou_thresh=.5)
     precision=(tp / (tp + fp))[:6]
     recall=(tp / (tpfn))[:6]
     print(f'precision:{precision}')
-    print(f'recall:{recall}')
-    print(f'f_value{1/(1/precision+1/recall)}')
-    print(f'mean{np.mean(1/(1/precision+1/recall))}')
+    print(f'recall   :{recall}')
+    print(f'f_value  :{1/(1/precision+1/recall)}')
+    print(f'mean:{np.mean(1/(1/precision+1/recall))}')
 
 
 if __name__=='__main__':
