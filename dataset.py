@@ -20,9 +20,8 @@ def base(path):
 def file(path):
     return path.split('/')[-1]
 
-
 class YOLOOutputDataset(torch.utils.data.Dataset):
-    def __init__(self, base, csvpath, size=(512, 512), numcls=6, iouthresh=.5):
+    def __init__(self, base, csvpath, size=(128, 128), numcls=6, iouthresh=.5):
 
         self.base = base
         self.size = size
@@ -32,6 +31,7 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
             csvreader = csv.reader(f)
             self.yolooutput = [row for row in csvreader if int(row[1]) < 6]
         self.transform = Compose([Resize(size), ToTensor()])
+        self.c=[]
 
     def __len__(self):
         return len(self.yolooutput)
@@ -66,13 +66,15 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
             cls1, box1 = box1
             cls2, box2 = box2
             if param == 'TF':
+                self.c.append(cal_iou(box1, box2))
+
                 return (cls1 == cls2) and cal_iou(box1, box2) > self.iouthresh
 
         bboxes = getbb(base(path), normalize=False)
         scorelist = [calscore(bbox, b) for b in bboxes]
 
         if param == 'TF':
-            return max(scorelist) == True
+            return False if scorelist==[] else max(scorelist) == True
 
 
 def getbb(basename, xmlbase="All/Annotations/", normalize=True):
@@ -85,7 +87,8 @@ def getbb(basename, xmlbase="All/Annotations/", normalize=True):
         h = int(size.find("height").text)
         t = list(root.iter("object"))
         if len(t) == 0:
-            raise ValueError
+            return []
+        #    pass
         for obj in root.iter("object"):
             xmlbox = obj.find("bndbox")
             b = (
@@ -273,16 +276,15 @@ def cal_iou(boxA, boxB):
     yA = max(boxA[1], boxB[1])
     xB = min(boxA[2], boxB[2])
     yB = min(boxA[3], boxB[3])
-    # crash ?
-    if not (boxA[0] < boxB[2] and boxA[2] > boxB[0] and boxA[1] < boxB[3] and boxA[3] > boxB[1]):
-        return 0
-    # compute the area of intersection rectangle
-    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
 
+    # compute the area of intersection rectangle
+    interArea = abs(max((xB - xA, 0)) * max((yB - yA), 0))
+    if interArea == 0:
+        return 0
     # compute the area of both the prediction and ground-truth
     # rectangles
-    boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
-    boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
+    boxAArea = abs((boxA[2] - boxA[0]) * (boxA[3] - boxA[1]))
+    boxBArea = abs((boxB[2] - boxB[0]) * (boxB[3] - boxB[1]))
 
     # compute the intersection over union by taking the intersection
     # area and dividing it by the sum of prediction + ground-truth

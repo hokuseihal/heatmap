@@ -13,11 +13,12 @@ from cal_score5 import precision_recall
 
 def main():
     writer = SummaryWriter()
-    batchsize = 8
+    batchsize = 16
     num_epoch = 1
     model_save_path = 'imgpackmodel.pth'
     testcsv = 'result_test_001.csv'
     traincsv = 'result_train_001.csv'
+    traincsv='result0_test.csv'
 
     train_dataset = dataset('All/', traincsv)
     test_dataset = dataset('All/', testcsv)
@@ -35,8 +36,29 @@ def main():
         model.load_state_dict(torch.load(model_save_path))
         print('load main weight')
     optimizer = torch.optim.Adam(model.parameters())
-    lossf = SoftmaxFocalLoss(gammma=0)
+    lossf = SoftmaxFocalLoss(gammma=2)
     num_epoch = num_epoch * len(train_dataset) // batchsize
+    ##test start
+    z = 0
+    a=0
+    b=0
+    c=0
+    d=0
+    e=0
+    f=0
+    g=0
+    for batch_idx, (img, splittedimg, mappedbox, bbox, target, idx) in enumerate(train_loader):
+        g+=(target.bool()).sum()
+        d+=(target.bool().logical_not()).sum()
+        e+=(bbox[1]>0.5).sum()
+        f+=(bbox[1]<0.5).sum()
+        b+=(target.bool() & (bbox[1] > 0.5)).sum()
+        z += (target.bool().logical_not() & (bbox[1]>0.5)).sum()
+        c+=(target.bool() & (bbox[1]<0.5)).sum()
+        a+=(target.bool().logical_not() & (bbox[1]>0.5).logical_not()).sum()
+    print(g,d,e,f,b,z,c,a)
+    exit(0)
+    ##test end
     for e in range(num_epoch):
         # train
         model.train()
@@ -76,10 +98,11 @@ def main():
                 pred = output.argmax(dim=-1, keepdim=True)
                 correct += patchaccf(target, pred)
                 rmap += prmap(target, output)
-                biggerprob = bbox[1] > thresh
+                biggerprob=torch.zeros_like(bbox[1],dtype=torch.bool)
+                #biggerprob = bbox[1] > thresh
                 oklist[idx] = ((pred.view(-1).cpu() == 1) | biggerprob).numpy()
 
-        print(f'Test Epoch: {e} [{batch_idx}/{len(train_loader)} ({100.0 * batch_idx / len(test_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
+        print(f'Test Epoch: {e} [{batch_idx}/{len(test_loader)} ({100.0 * batch_idx / len(test_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
         print(f'precision:{rmap.diag() / rmap.sum(dim=-1)}\nrecall:{rmap.diag() / rmap.sum(dim=0)}')
         precision_recall(testcsv, oklist)
         # exit(1)
