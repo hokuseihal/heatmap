@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from mobilenet import mobilenet_v2, MobileNetV2
+from resnet import resnet152
 import torch.nn.functional as F
 import numpy  as np
 import os
@@ -16,7 +17,8 @@ def vec2img(vec, size, sp):
 
 
 class ImgPackModel(nn.Module):
-    def __init__(self):
+    def __init__(self,param='REG'):
+        assert param=='REG'
         super(ImgPackModel, self).__init__()
         self.biclsmodel = PatchModel(2)
         patchmodelsavedpath = 'patchmodel.pth'
@@ -24,25 +26,30 @@ class ImgPackModel(nn.Module):
             self.biclsmodel.load_state_dict(torch.load(patchmodelsavedpath))
             print('load', patchmodelsavedpath)
 
-        self.feature = MobileNetV2(11)
-        # self.cnn1=nn.Conv2d(cls,8)
-        # self.cnn2=nn.Conv2d(8,4)
-        # self.cnn=nn.Conv2d(4,2)
+        self.feature = MobileNetV2(9)
+        #self.feature=resnet152(in_channel=9)
         self.classifier = nn.Sequential(
             nn.Dropout(0.2),
             nn.Linear(1000, 2),
         )
+        self.locator=nn.Sequential(
+            nn.Dropout(0.2),
+            nn.Linear(1000,4),
+            nn.Sigmoid()
+        )
 
     def forward(self, img, splittedimg, bbox, mappedbox):
-        with torch.no_grad():
-            splittedimg = self.biclsmodel(splittedimg)
-        splittedimg = vec2img(splittedimg, 128, 6)
-        x = torch.cat([mappedbox, splittedimg, img], dim=1)
-        # x = torch.cat([mappedbox, img], dim=1)
+        #with torch.no_grad():
+        #    splittedimg = self.biclsmodel(splittedimg)
+        #    splittedimg = nn.Softmax(splittedimg)
+        #splittedimg = vec2img(splittedimg, 128, 6)
+        # x = torch.cat([mappedbox, splittedimg, img], dim=1)
+        x = torch.cat([mappedbox, img], dim=1)
         # x=img
         x = self.feature(x)
-        x = self.classifier(x)
-        return x
+        obj = self.classifier(x)
+        coor=self.locator(x)
+        return obj,coor
 
 
 class PatchModel(nn.Module):

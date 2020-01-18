@@ -21,12 +21,14 @@ def file(path):
     return path.split('/')[-1]
 
 class YOLOOutputDataset(torch.utils.data.Dataset):
-    def __init__(self, base, csvpath, size=(128, 128), numcls=6, iouthresh=.5):
-
+    def __init__(self, base, csvpath, size=(128, 128), numcls=6, iouthresh=.5,crop=False,reg_iou_thresh=0.4,param='REG'):
+        self.crop=crop
         self.base = base
         self.size = size
         self.iouthresh = iouthresh
         self.numcls = numcls
+        self.param=param
+        self.reg_iou_thresh=reg_iou_thresh
         with open(csvpath) as f:
             csvreader = csv.reader(f)
             self.yolooutput = [row for row in csvreader if int(row[1]) < 6]
@@ -46,35 +48,41 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
         y1 = int(self.yolooutput[idx][6])
         # TODO BE VARIABLE
         img = Image.open(imgname)
+        if self.crop:
+            img=img.crop((x0,y0,x1,y0))
         #splitedimg = loadimgsp(imgname)
         splitedimg=torch.zeros(1)
         img = self.transform(img)
         mapped_box = torch.zeros(self.numcls, *self.size)
         # Attention! (C,H,W)
-        label = self.checkRDD(imgname, (cls, (x0, y0, x1, y1)))
-        x0 = int(x0 * 128 / 600)
-        y0 = int(y0 * 128 / 600)
-        x1 = int(x1 * 128 / 600)
-        y1 = int(y1 * 128 / 600)
+        obj,coor = self.checkRDD(imgname, (cls, (x0, y0, x1, y1)))
+        x0 = int(x0 * self.size[0] / 600)
+        y0 = int(y0 * self.size[1] / 600)
+        x1 = int(x1 * self.size[0] / 600)
+        y1 = int(y1 * self.size[1] / 600)
         mapped_box[cls, x0:x1, y0:y1] = prob
-        return img, splitedimg, mapped_box, (cls, prob, x0, y0,x1, y1), int(label),idx
+        return img, splitedimg, mapped_box, (cls, prob, x0, y0,x1, y1), obj,coor/600,idx
 
-    def checkRDD(self, path, bbox, param='TF'):
+    def checkRDD(self, path, bbox):
         def calscore(box1, box2):
-            clserror = 1
-            iouerror = 1
             cls1, box1 = box1
             cls2, box2 = box2
-            if param == 'TF':
+            if self.param == 'TF':
                 self.c.append(cal_iou(box1, box2))
-
                 return (cls1 == cls2) and cal_iou(box1, box2) > self.iouthresh
-
+            elif self.param=='REG':
+                return (cls1 == cls2)*(cal_iou(box1,box2)>self.reg_iou_thresh)*cal_iou(box1,box2)
         bboxes = getbb(base(path), normalize=False)
         scorelist = [calscore(bbox, b) for b in bboxes]
 
-        if param == 'TF':
+        if self.param == 'TF':
             return False if scorelist==[] else max(scorelist) == True
+        elif self.param=='REG':
+            if scorelist==[] or max(scorelist)==0:
+                return 0,np.array([0.,0.,0.,0.]).astype(np.float32)
+            else:
+                #TODO DEBUG
+                return 1,np.array([*bboxes[np.argmax(scorelist)][1]]).astype(np.float32)
 
 
 def getbb(basename, xmlbase="All/Annotations/", normalize=True):
