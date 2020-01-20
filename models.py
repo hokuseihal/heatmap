@@ -26,7 +26,7 @@ class ImgPackModel(nn.Module):
             print('load', patchmodelsavedpath)
 
         self.feature = MobileNetV2(3)
-        #self.feature=resnet152(in_channel=9)
+        #self.feature=resnet152(in_channel=3)
         self.classifier = nn.Sequential(
             nn.Dropout(0.2),
             nn.Linear(1000, 256),

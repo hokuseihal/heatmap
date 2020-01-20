@@ -110,6 +110,7 @@ class Bottleneck(nn.Module):
 
         out += identity
         out = self.relu(out)
+        #out=nn.Dropout2d(0.25)(out)
 
         return out
 
