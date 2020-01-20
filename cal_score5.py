@@ -84,7 +84,7 @@ def tester(testcsv,oklist,probthresh):
                     mcut=cut
             if mx>0.52:
                 print('!!!!!!!!!!!!!!!!CONGRATULATION!!!!!!!!!!!!!!!')
-    print(f'max is {mx}')
+    print(f'max is {mx},yolo:{myolo},out:{mout},cut:{mcut}')
     precision_recall(testcsv,oklist,probthresh,myolo,mout,mcut)
 
 if __name__ == '__main__':
