@@ -76,18 +76,19 @@ def tester(testcsv,oklist,probthresh):
             for cut in np.linspace(0.1,0.9,9):
                 print(f'yolo:{yolo},out:{out},cut:{cut}')
                 now=precision_recall(testcsv, oklist, prob_thresh=probthresh, test_prob_yolo=yolo, test_prob_out=out,
-                                  test_prob_cut=cut)
+                                     test_prob_cut=cut)
                 print(now)
                 if mx<now:
                     mx=now
                     myolo=yolo
                     mout=out
                     mcut=cut
-            if mx>0.52:
-                print('!!!!!!!!!!!!!!!!CONGRATULATION!!!!!!!!!!!!!!!')
+            if mx>0.515:
                 with open('congrad.txt','a') as f:
                     f.write(f'yolo:{yolo},out:{out},cut:{cut}')
                     f.write(f'{precision_recall(testcsv, oklist, prob_thresh=probthresh, test_prob_yolo=yolo, test_prob_out=out,test_prob_cut=cut)}')
+            if mx>0.52:
+                print('!!!!!!!!!!!!!!!!CONGRATULATION!!!!!!!!!!!!!!!')
     print(f'max is {mx},yolo:{myolo},out:{mout},cut:{mcut}')
     precision_recall(csvfilename=testcsv,oklist=oklist,prob_thresh=probthresh,test_prob_yolo=myolo,test_prob_out=mout,test_prob_cut=mcut)
 
