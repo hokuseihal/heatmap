@@ -3,7 +3,7 @@ import csv
 from core import readxml, classname
 from cal_score3 import cal_iou
 
-def precision_recall(csvfilename='01test.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=0.5,test_prob_cut=0):
+def precision_recall(csvfilename='01test.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=0.5,test_prob_cut=0,return_str=False):
     detect_dic = {}
     tp = np.zeros(len(classname))
     fp = np.zeros(len(classname))
@@ -63,7 +63,8 @@ def precision_recall(csvfilename='01test.csv', oklist=None, iou_thresh=.5, prob_
     print(f'recall   :{recall}')
     print(f'f_value  :{2 / (1 / precision + 1 / recall)}')
     print(f'mean:{np.mean(2 / (1 / precision + 1 / recall))}')
-
+    if return_str:
+        return f'precision:{precision} recall   :{recall} f_value  :{2 / (1 / precision + 1 / recall)} :mean:{np.mean(2 / (1 / precision + 1 / recall))}\n'
     return np.mean(2 / (1 / precision + 1 / recall))
 
 def tester(testcsv,oklist,probthresh):
@@ -86,7 +87,7 @@ def tester(testcsv,oklist,probthresh):
             if mx>0.515:
                 with open('congrad.txt','a') as f:
                     f.write(f'yolo:{yolo},out:{out},cut:{cut}')
-                    f.write(f'{precision_recall(testcsv, oklist, prob_thresh=probthresh, test_prob_yolo=yolo, test_prob_out=out,test_prob_cut=cut)}')
+                    f.write(f'{precision_recall(testcsv, oklist, prob_thresh=probthresh, test_prob_yolo=yolo, test_prob_out=out,test_prob_cut=cut,return_str=True)}')
             if mx>0.52:
                 print('!!!!!!!!!!!!!!!!CONGRATULATION!!!!!!!!!!!!!!!')
     print(f'max is {mx},yolo:{myolo},out:{mout},cut:{mcut}')
