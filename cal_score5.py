@@ -71,9 +71,9 @@ def tester(testcsv,oklist,probthresh):
     myolo=0
     mout=0
     mcut=0
-    for yolo in np.linspace(0.1,0.9,8):
-        for out in np.linspace(0.1,0.9,8):
-            for cut in np.linspace(0.1,0.9,8):
+    for yolo in np.linspace(0.1,0.9,9):
+        for out in np.linspace(0.1,0.9,9):
+            for cut in np.linspace(0.1,0.9,9):
                 print(f'yolo:{yolo},out:{out},cut:{cut}')
                 now=precision_recall(testcsv, oklist, prob_thresh=probthresh, test_prob_yolo=yolo, test_prob_out=out,
                                   test_prob_cut=cut)
