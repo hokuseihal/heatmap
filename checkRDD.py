@@ -99,9 +99,9 @@ def main():
                 rmap += prmap(objtarget, out_obj)
                 oklist[idx] = (out_obj[:,1]).detach().cpu().numpy()
 
+        tester(testcsv, oklist, probthresh)
         print(f'Test Epoch: {e} [{batch_idx}/{len(test_loader)} ({100.0 * batch_idx / len(test_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
         print(f'precision:{rmap.diag() / rmap.sum(dim=0)}\nrecall:{rmap.diag() / rmap.sum(dim=-1)}')
-        tester(testcsv, oklist, probthresh)
         # exit(1)
         torch.save(model.state_dict(), model_save_path)
 
