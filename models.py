@@ -17,8 +17,7 @@ def vec2img(vec, size, sp):
 
 
 class ImgPackModel(nn.Module):
-    def __init__(self,param='REG'):
-        assert param=='REG'
+    def __init__(self):
         super(ImgPackModel, self).__init__()
         self.biclsmodel = PatchModel(2)
         patchmodelsavedpath = 'patchmodel.pth'
@@ -26,30 +25,31 @@ class ImgPackModel(nn.Module):
             self.biclsmodel.load_state_dict(torch.load(patchmodelsavedpath))
             print('load', patchmodelsavedpath)
 
-        self.feature = MobileNetV2(9)
+        self.feature = MobileNetV2(3)
         #self.feature=resnet152(in_channel=9)
         self.classifier = nn.Sequential(
             nn.Dropout(0.2),
-            nn.Linear(1000, 2),
+            nn.Linear(1000, 256),
+            nn.ReLU(),
+            nn.Linear(256,64),
+            nn.ReLU(),
+            nn.Linear(64,2),
         )
-        self.locator=nn.Sequential(
-            nn.Dropout(0.2),
-            nn.Linear(1000,4),
-            nn.Sigmoid()
+        self.decider=nn.Sequential(
+            nn.Linear(4,8),
+            nn.ReLU(),
+            nn.Linear(8,8),
+            nn.ReLU(),
+            nn.Linear(8,2)
         )
 
     def forward(self, img, splittedimg, bbox, mappedbox):
-        #with torch.no_grad():
-        #    splittedimg = self.biclsmodel(splittedimg)
-        #    splittedimg = nn.Softmax(splittedimg)
-        #splittedimg = vec2img(splittedimg, 128, 6)
-        # x = torch.cat([mappedbox, splittedimg, img], dim=1)
-        x = torch.cat([mappedbox, img], dim=1)
-        # x=img
-        x = self.feature(x)
-        obj = self.classifier(x)
-        coor=self.locator(x)
-        return obj,coor
+        x = self.feature(img)
+        x=self.classifier(x)
+        x = torch.cat([splittedimg, x], dim=1)
+        obj = self.decider(x)
+        obj=torch.softmax(obj,dim=-1)
+        return obj
 
 
 class PatchModel(nn.Module):
@@ -71,5 +71,5 @@ class PatchModel(nn.Module):
         x = self.fc2(x)
         x = F.relu(x)
         x = self.fc3(x)
-        x = x.view(*s[:2], 2)
+        #x = x.view(*s[:2], 2)
         return x

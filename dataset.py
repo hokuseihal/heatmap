@@ -8,7 +8,7 @@ from torchvision.transforms import Compose
 from torchvision.transforms import Resize
 from torchvision.transforms import ToTensor
 import csv
-from loadimg import loadimgsp
+from loadimg import Load2cls
 from PIL import Image
 from core import ospathcat
 
@@ -21,18 +21,18 @@ def file(path):
     return path.split('/')[-1]
 
 class YOLOOutputDataset(torch.utils.data.Dataset):
-    def __init__(self, base, csvpath, size=(128, 128), numcls=6, iouthresh=.5,crop=False,reg_iou_thresh=0.4,param='REG'):
+    def __init__(self, base, csvpath, size=(128, 128), numcls=6, iouthresh=.5,crop=True,prob_thresh=0.5,param='TF'):
         self.crop=crop
         self.base = base
         self.size = size
         self.iouthresh = iouthresh
         self.numcls = numcls
         self.param=param
-        self.reg_iou_thresh=reg_iou_thresh
         with open(csvpath) as f:
             csvreader = csv.reader(f)
-            self.yolooutput = [row for row in csvreader if int(row[1]) < 6]
+            self.yolooutput = [row for row in csvreader if int(row[1]) < 6 and float(row[2])>prob_thresh]
         self.transform = Compose([Resize(size), ToTensor()])
+        self.bicls=Load2cls('patch.pkl')
         self.c=[]
 
     def __len__(self):
@@ -49,27 +49,32 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
         # TODO BE VARIABLE
         img = Image.open(imgname)
         if self.crop:
-            img=img.crop((x0,y0,x1,y0))
-        #splitedimg = loadimgsp(imgname)
-        splitedimg=torch.zeros(1)
+            img=img.crop((x0,y0,x1,y1))
+            #img.save('img.jpg','JPEG', optimize=True)
+        splitedimg = self.bicls.get(imgname)
+        splitedimg=(splitedimg[x0//100:(x1//100)+1,y0//100:(y1//100)+1]).reshape(-1,2).mean(dim=0).reshape(2)
+        if (splitedimg!=splitedimg).all():
+            splitedimg=torch.zeros_like(splitedimg)
         img = self.transform(img)
-        mapped_box = torch.zeros(self.numcls, *self.size)
+        mapped_box = torch.zeros(1,*self.size)
         # Attention! (C,H,W)
-        obj,coor = self.checkRDD(imgname, (cls, (x0, y0, x1, y1)))
+        obj= self.checkRDD(imgname, (cls, (x0, y0, x1, y1)))
         x0 = int(x0 * self.size[0] / 600)
         y0 = int(y0 * self.size[1] / 600)
         x1 = int(x1 * self.size[0] / 600)
         y1 = int(y1 * self.size[1] / 600)
-        mapped_box[cls, x0:x1, y0:y1] = prob
-        return img, splitedimg, mapped_box, (cls, prob, x0, y0,x1, y1), obj,coor/600,idx
+        mapped_box[0,x0:x1, y0:y1] = prob
+        #if obj:
+        #    if (splitedimg==splitedimg).all():
+        #        self.c.append(splitedimg[1].item())
+        return img, splitedimg, mapped_box, (cls, prob, x0, y0,x1, y1), int(obj),idx
 
     def checkRDD(self, path, bbox):
         def calscore(box1, box2):
             cls1, box1 = box1
             cls2, box2 = box2
             if self.param == 'TF':
-                self.c.append(cal_iou(box1, box2))
-                return (cls1 == cls2) and cal_iou(box1, box2) > self.iouthresh
+                return cal_iou(box1, box2) > self.iouthresh #and cls1==cls2
             elif self.param=='REG':
                 return (cls1 == cls2)*(cal_iou(box1,box2)>self.reg_iou_thresh)*cal_iou(box1,box2)
         bboxes = getbb(base(path), normalize=False)
@@ -77,12 +82,6 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
 
         if self.param == 'TF':
             return False if scorelist==[] else max(scorelist) == True
-        elif self.param=='REG':
-            if scorelist==[] or max(scorelist)==0:
-                return 0,np.array([0.,0.,0.,0.]).astype(np.float32)
-            else:
-                #TODO DEBUG
-                return 1,np.array([*bboxes[np.argmax(scorelist)][1]]).astype(np.float32)
 
 
 def getbb(basename, xmlbase="All/Annotations/", normalize=True):

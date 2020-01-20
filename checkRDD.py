@@ -8,21 +8,20 @@ from core import train, test, SoftmaxFocalLoss
 import numpy as np
 from core import prmap, patchaccf
 from torch.utils.tensorboard import SummaryWriter
-from cal_score5 import precision_recall
-from torchvision import models
+from cal_score5 import precision_recall, tester
 
 
 def main():
     writer = SummaryWriter()
-    batchsize = 16
-    num_epoch = 1
+    batchsize = 96
+    num_epoch = 100
     model_save_path = 'imgpackmodel.pth'
-    traincsv = 'reversetrain.csv'
+    traincsv = 'reversetrain_001.csv'
     testcsv = '01test.csv'
-    #traincsv='01test.csv'
-    param='REG'
-    train_dataset = dataset('All/', traincsv,param=param)
-    test_dataset = dataset('All/', testcsv,param=param)
+    # traincsv = '01test.csv'
+    probthresh = .01
+    train_dataset = dataset('All/', traincsv, prob_thresh=probthresh)
+    test_dataset = dataset('All/', testcsv, prob_thresh=probthresh)
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=batchsize, shuffle=True
     )
@@ -32,35 +31,33 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # device = 'cpu'
     print(device)
-    model = Model(param=param).to(device)
+    model = Model().to(device)
     if os.path.exists(model_save_path):
         model.load_state_dict(torch.load(model_save_path))
         print('load main weight')
     optimizer = torch.optim.Adam(model.parameters())
-    #lossf = SoftmaxFocalLoss(gammma=2)
-    coorlossf=nn.MSELoss(reduction='none')
-    objlossf=SoftmaxFocalLoss(gammma=2)
-    num_epoch = num_epoch * len(train_dataset) // batchsize
+    objlossf = SoftmaxFocalLoss(gammma=2)
     ##test start
-    #z = 0
-    #a=0
-    #b=0
-    #c=0
-    #d=0
-    #e=0
-    #f=0
-    #g=0
-    #for batch_idx, (img, splittedimg, mappedbox, bbox, target, idx) in enumerate(train_loader):
-    #    g+=(target.bool()).sum()
-    #    d+=(target.bool().logical_not()).sum()
-    #    e+=(bbox[1]>0.5).sum()
-    #    f+=(bbox[1]<0.5).sum()
-    #    b+=(target.bool() & (bbox[1] > 0.5)).sum()
-    #    z += (target.bool().logical_not() & (bbox[1]>0.5)).sum()
-    #    c+=(target.bool() & (bbox[1]<0.5)).sum()
-    #    a+=(target.bool().logical_not() & (bbox[1]>0.5).logical_not()).sum()
-    #print(g,d,e,f,b,z,c,a)
-    #exit(0)
+    # z = 0
+    # a = 0
+    # b = 0
+    # c = 0
+    # d = 0
+    # e = 0
+    # f = 0
+    # g = 0
+    # for batch_idx, (img, splittedimg, mappedbox, bbox, target, idx) in enumerate(train_loader):
+    #    g += (target.bool()).sum()
+    #    d += (target.bool().logical_not()).sum()
+    #    e += (bbox[1] > 0.5).sum()
+    #    f += (bbox[1] < 0.5).sum()
+    #    b += (target.bool() & (bbox[1] > 0.5)).sum()
+    #    z += (target.bool().logical_not() & (bbox[1] > 0.5)).sum()
+    #    c += (target.bool() & (bbox[1] < 0.5)).sum()
+    #    a += (target.bool().logical_not() & (bbox[1] > 0.5).logical_not()).sum()
+    # print(e, f, g, d, b, z, c, a)
+    # print(np.mean(train_dataset.c))
+    # exit(0)
     ##test end
     for e in range(num_epoch):
         # train
@@ -68,56 +65,43 @@ def main():
         # log_interval = len(train_loader)
         log_interval = 16
         losslist = []
-        for batch_idx, (img, splittedimg, mappedbox, bbox, objtarget,coortarget, idx) in enumerate(train_loader):
-            img, splittedimg, mappedbox, objtarget,coortarget = img.to(device), splittedimg.to(device), mappedbox.to(
-                device), objtarget.to(device),coortarget.to(device)
+        for batch_idx, (img, splittedimg, mappedbox, bbox, objtarget, idx) in enumerate(train_loader):
+            img, splittedimg, mappedbox, objtarget = img.to(device), splittedimg.to(device), mappedbox.to(
+                device), objtarget.to(device)
             optimizer.zero_grad()
-            out_obj,out_coor = model(img, splittedimg, bbox, mappedbox)
-            coorloss = coorlossf(out_coor, coortarget).sum(dim=-1)
-            objloss=objlossf(out_obj,objtarget)
-            loss=objloss+torch.dot(coorloss,objtarget.float())
+            out_obj = model(img, splittedimg, bbox, mappedbox)
+            loss = objlossf(out_obj, objtarget)
             loss.backward()
             optimizer.step()
             writer.add_scalar('Loss:Train', loss.item(), e)
             losslist.append(loss.item())
             if (batch_idx + 1) % log_interval == 0:
                 print(f'Train Epoch: {e} [{batch_idx * batchsize}/{len(train_loader.dataset)} ({100.0 * batch_idx / len(train_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
-                #break
+                losslist = []
+                # break
         # test
         correct = 0
         rmap = 0
         thresh = .5
         oklist = np.zeros(len(test_dataset))
         losslist = []
-        coorlist=np.zeros((len(test_dataset),4))
-        for batch_idx, (img, splittedimg, mappedbox, bbox, objtarget, coortarget, idx) in enumerate(test_loader):
-            img, splittedimg, mappedbox, objtarget, coortarget = img.to(device), splittedimg.to(device), mappedbox.to(
-                device), objtarget.to(device), coortarget.to(device)
+        model.eval()
+        for batch_idx, (img, splittedimg, mappedbox, bbox, objtarget, idx) in enumerate(test_loader):
+            img, splittedimg, mappedbox, objtarget = img.to(device), splittedimg.to(device), mappedbox.to(
+                device), objtarget.to(device)
             with torch.no_grad():
-                out_obj, out_coor = model(img, splittedimg, bbox, mappedbox)
-                coorloss = coorlossf(out_coor, coortarget).sum(dim=-1)
-                objloss = objlossf(out_obj, objtarget)
-                loss = objloss + torch.dot(coorloss, objtarget.float())
+                out_obj = model(img, splittedimg, bbox, mappedbox)
+                loss = objlossf(out_obj, objtarget)
                 writer.add_scalar('Loss:Test', loss.item(), e)
                 losslist.append(loss.item())
-                #Regacy of TF
-                #pred = output.argmax(dim=-1, keepdim=True)
-                #correct += patchaccf(target, pred)
-                #rmap += prmap(target, output)
-                #biggerprob=torch.zeros_like(bbox[1],dtype=torch.bool)
-                ##biggerprob = bbox[1] > thresh
-                #oklist[idx] = ((pred.view(-1).cpu() == 1) | biggerprob).numpy()
-                #REG
                 pred = out_obj.argmax(dim=-1, keepdim=True)
                 correct += patchaccf(objtarget, pred)
                 rmap += prmap(objtarget, out_obj)
-                oklist[idx] = (pred.view(-1).cpu() == 1).numpy()
-                coorlist[idx]=(out_coor*600).cpu()
-
+                oklist[idx] = (out_obj[:,1]).detach().cpu().numpy()
 
         print(f'Test Epoch: {e} [{batch_idx}/{len(test_loader)} ({100.0 * batch_idx / len(test_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
         print(f'precision:{rmap.diag() / rmap.sum(dim=0)}\nrecall:{rmap.diag() / rmap.sum(dim=-1)}')
-        precision_recall(testcsv, oklist,coorlist)
+        tester(testcsv, oklist, probthresh)
         # exit(1)
         torch.save(model.state_dict(), model_save_path)
 

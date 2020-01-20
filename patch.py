@@ -60,34 +60,37 @@ batchsize = 72
 num_epoch = 252
 cls = 2
 # rdpd = RDPD(rddbase="All/", patchbase="rdd_patch/", split=(6, 6))
-rdpd = PD('rdd_patch/')
-train_rdd, test_rdd = torch.utils.data.random_split(
-    rdpd, [int(len(rdpd) * 0.7), len(rdpd) - int(len(rdpd) * 0.7)]
-)
-
-train_rdpd_loader = torch.utils.data.DataLoader(
-    train_rdd, batch_size=batchsize, shuffle=True
-)
-test_rdpd_loader = torch.utils.data.DataLoader(
-    test_rdd, batch_size=1, shuffle=True
-)
-train_ypd = YPD('All/', 'pickle.pkl','All/ImageSets/Main/train.txt')
-test_ypd=YPD('All/', 'pickle.pkl','All/ImageSets/Main/val.txt')
-train_ypd_loader = torch.utils.data.DataLoader(
-    train_ypd, batch_size=4, shuffle=True
-)
-test_ypd_loader = torch.utils.data.DataLoader(
-    test_ypd, batch_size=1, shuffle=True
-)
+#rdpd = PD('rdd_patch/')
+#train_rdd, test_rdd = torch.utils.data.random_split(
+#    rdpd, [int(len(rdpd) * 0.7), len(rdpd) - int(len(rdpd) * 0.7)]
+#)
+#
+#train_rdpd_loader = torch.utils.data.DataLoader(
+#    train_rdd, batch_size=batchsize, shuffle=True
+#)
+#test_rdpd_loader = torch.utils.data.DataLoader(
+#    test_rdd, batch_size=1, shuffle=True
+#)
+#train_ypd = YPD('All/', 'pickle.pkl','All/ImageSets/Main/train.txt')
+#test_ypd=YPD('All/', 'pickle.pkl','All/ImageSets/Main/val.txt')
+#train_ypd_loader = torch.utils.data.DataLoader(
+#    train_ypd, batch_size=4, shuffle=True
+#)
+#test_ypd_loader = torch.utils.data.DataLoader(
+#    test_ypd, batch_size=1, shuffle=True
+#)
 # finetuning
 device = "cuda" if torch.cuda.is_available() else "cpu"
-device='cpu'
+#device='cpu'
 print(device)
 patchmodel = PatchModel(cls).to(device)
+if os.path.exists('patchmodel.pth'):
+    patchmodel.load_state_dict(torch.load('patchmodel.pth'))
+    print('load patch weight')
 yolopatchmodel = YoloPatchmodel(cls).to(device)
 if os.path.exists('yolopatchmodel.pth'):
     yolopatchmodel.load_state_dict(torch.load('yolopatchmodel.pth'))
-    print('load weight')
+    print('load yolo weight')
 optimizer = torch.optim.Adam(patchmodel.parameters())
 yolooptimizer=torch.optim.Adam(yolopatchmodel.parameters())
 patchlossf = SoftmaxFocalLoss(gammma=2)
@@ -148,12 +151,30 @@ def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.1):
                 print(imgname[i//(13*13*5)].split('.')[0], cls[i].item(), score[i].item(), *boxes[i].int().tolist())
                 writer.writerow([imgname[i//(13*13*5)].split('.')[0], cls[i].item(), score[i].item(), *boxes[i].int().tolist()])
 
-test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
+#test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
 ##pretraining for patch binary classification
 # for e in range(num_epoch):
 #   train(patchmodel, device, train_rdpd_loader, patchlossf, optimizer, e)
 #   test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
 #   torch.save(patchmodel.state_dict(), 'patchmodel.pth')
+savedic={}
+from loadimg import  loadimgsp
+import pickle
+txt='/home/hokusei/src/mydarknet/all.txt'
+with open(txt) as f:
+    lines=[i.strip() for i in f.readlines()]
+for l in lines:
+    img=loadimgsp(l)
+    img=img.to(device)
+    patchmodel.eval()
+    with torch.no_grad():
+        out=patchmodel(img)
+    out=out.view(6,6,2)
+    out=torch.softmax(out,dim=-1)
+    savedic[l]=out
+with open('patch.pkl','wb') as f:
+    pickle.dump(savedic,f)
+
 
 for e in range(num_epoch):
     #with open('catyolo.csv','w') as f:

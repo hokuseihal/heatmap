@@ -3,18 +3,16 @@ import csv
 from core import readxml, classname
 from cal_score3 import cal_iou
 
-
-def precision_recall(csvfilename='result_test_001.csv', oklist=None, coorlist=None, iou_thresh=.5, prob_thresh=0.5):
+def precision_recall(csvfilename='01test.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=0.5,test_prob_cut=0):
     detect_dic = {}
     tp = np.zeros(len(classname))
     fp = np.zeros(len(classname))
     tpfn = np.zeros(len(classname))
     with open(csvfilename) as f:
         reader = csv.reader(f)
-        for idx, csv_detect_row in enumerate(reader):
-            if oklist is None or oklist[idx]:
-                if sum(coorlist[idx]) > 0:
-                    csv_detect_row[-4:] = coorlist[idx]
+        lines=[i for i in reader if float(i[2])>prob_thresh]
+        for idx, csv_detect_row in enumerate(lines):
+            if (oklist is None or oklist[idx]>test_prob_out or float(csv_detect_row[2])>test_prob_yolo) and float(csv_detect_row[2])>test_prob_cut:
                 detect_dic.setdefault(csv_detect_row[0], []).append(csv_detect_row)
             else:
                 detect_dic.setdefault(csv_detect_row[0], [])
@@ -66,6 +64,18 @@ def precision_recall(csvfilename='result_test_001.csv', oklist=None, coorlist=No
     print(f'f_value  :{2 / (1 / precision + 1 / recall)}')
     print(f'mean:{np.mean(2 / (1 / precision + 1 / recall))}')
 
+    return np.mean(2 / (1 / precision + 1 / recall))
+
+def tester(testcsv,oklist,probthresh):
+    mx=0
+    for yolo in np.linspace(0.1,0.9,8):
+        for out in np.linspace(0.1,0.9,8):
+            print(f'yolo:{yolo},out:{out}')
+            mx=max(precision_recall(testcsv, oklist, prob_thresh=probthresh,test_prob_yolo=yolo,test_prob_out=out),mx)
+            if mx>0.52:
+                print('!!!!!!!!!!!!!!!!CONGRATULATION!!!!!!!!!!!!!!!')
+    print(f'max is {mx}')
 
 if __name__ == '__main__':
     precision_recall()
+

@@ -19,4 +19,13 @@ def loadimgsp(imp,sp=6):
     for i in range(len(out_img)):
         out_img[i]=ToTensor()(Resize((128,128))(Image.fromarray(out_img[i])))
     return torch.stack(out_img)
+
+import pickle
+class Load2cls:
+    def __init__(self,pklp):
+        with open(pklp, mode='rb') as f:
+            self.dic= pickle.load(f)
+    def get(self,imp):
+        return self.dic[imp]
+
 loadimgsp('All/JPEGImages/Adachi_20170914152124.jpg')
