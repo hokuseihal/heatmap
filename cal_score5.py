@@ -85,6 +85,9 @@ def tester(testcsv,oklist,probthresh):
                     mcut=cut
             if mx>0.52:
                 print('!!!!!!!!!!!!!!!!CONGRATULATION!!!!!!!!!!!!!!!')
+                with open('congrad.txt','a') as f:
+                    f.write(f'yolo:{yolo},out:{out},cut:{cut}')
+                    f.write(f'{precision_recall(testcsv, oklist, prob_thresh=probthresh, test_prob_yolo=yolo, test_prob_out=out,test_prob_cut=cut)}')
     print(f'max is {mx},yolo:{myolo},out:{mout},cut:{mcut}')
     precision_recall(csvfilename=testcsv,oklist=oklist,prob_thresh=probthresh,test_prob_yolo=myolo,test_prob_out=mout,test_prob_cut=mcut)
 
