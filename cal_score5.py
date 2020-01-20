@@ -68,14 +68,24 @@ def precision_recall(csvfilename='01test.csv', oklist=None, iou_thresh=.5, prob_
 
 def tester(testcsv,oklist,probthresh):
     mx=0
+    myolo=0
+    mout=0
+    mcut=0
     for yolo in np.linspace(0.1,0.9,8):
         for out in np.linspace(0.1,0.9,8):
             for cut in np.linspace(0.1,0.9,8):
                 print(f'yolo:{yolo},out:{out},cut:{cut}')
-                mx=max(precision_recall(testcsv, oklist, prob_thresh=probthresh,test_prob_yolo=yolo,test_prob_out=out,test_prob_cut=cut),mx)
+                now=precision_recall(testcsv, oklist, prob_thresh=probthresh, test_prob_yolo=yolo, test_prob_out=out,
+                                  test_prob_cut=cut)
+                if mx<now:
+                    mx=now
+                    myolo=yolo
+                    mout=out
+                    mcut=cut
             if mx>0.52:
                 print('!!!!!!!!!!!!!!!!CONGRATULATION!!!!!!!!!!!!!!!')
     print(f'max is {mx}')
+    precision_recall(testcsv,oklist,probthresh,myolo,mout,mcut)
 
 if __name__ == '__main__':
     precision_recall()
