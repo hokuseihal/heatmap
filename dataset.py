@@ -11,77 +11,101 @@ import csv
 from loadimg import Load2cls
 from PIL import Image
 from core import ospathcat
+def vec2img(vec, size, sp):
+    # ATTENNTION!!(C,H,W)
+    c = vec.shape[-1]
+    vec = vec.reshape(-1, sp, sp, c)
+    vec = vec.permute(0, 3, 2, 1)
+    vec = F.interpolate(vec, (size, size))
+    return vec
 
 
 def noex(path):
     return os.path.splitext(path)[0]
+
+
 def base(path):
     return path.split('/')[-1].split('.')[0]
+
+
 def file(path):
     return path.split('/')[-1]
 
+
 class YOLOOutputDataset(torch.utils.data.Dataset):
-    def __init__(self, base, csvpath, size=(128, 128), numcls=6, iouthresh=.5,crop=True,prob_thresh=0.5,param='TF'):
-        self.crop=crop
+    def __init__(self, base, csvpath, size=(128, 128), numcls=6, iouthresh=.5, crop=True, prob_thresh=0.5, param='TF',mappedcls=False,getmapimg=True):
+        self.crop = crop
         self.base = base
         self.size = size
         self.iouthresh = iouthresh
         self.numcls = numcls
-        self.param=param
+        self.param = param
         with open(csvpath) as f:
             csvreader = csv.reader(f)
-            self.yolooutput = [row for row in csvreader if int(row[1]) < 6 and float(row[2])>prob_thresh]
+            self.yolooutput = [row for row in csvreader if int(row[1]) < 6 and float(row[2]) > prob_thresh]
         self.transform = Compose([Resize(size), ToTensor()])
-        self.bicls=Load2cls('patch.pkl')
-        self.c=[]
+        self.bicls = Load2cls('patch.pkl')
+        self.c = []
+        self.mappedcls=mappedcls
+        self.getmapimg=getmapimg
 
     def __len__(self):
         return len(self.yolooutput)
 
     def __getitem__(self, idx):
-        imgname = ospathcat([self.base,'JPEGImages',file(self.yolooutput[idx][0])])
+        imgname = ospathcat([self.base, 'JPEGImages', file(self.yolooutput[idx][0])])
         cls = int(self.yolooutput[idx][1])
         prob = float(self.yolooutput[idx][2])
         x0 = int(self.yolooutput[idx][3])
         y0 = int(self.yolooutput[idx][4])
         x1 = int(self.yolooutput[idx][5])
         y1 = int(self.yolooutput[idx][6])
-        # TODO BE VARIABLE
         img = Image.open(imgname)
         if self.crop:
-            img=img.crop((x0,y0,x1,y1))
-            #img.save('img.jpg','JPEG', optimize=True)
+            img = img.crop((x0, y0, x1, y1))
+            # img.save('img.jpg','JPEG', optimize=True)
+
         splitedimg = self.bicls.get(imgname)
-        splitedimg=(splitedimg[x0//100:(x1//100)+1,y0//100:(y1//100)+1]).reshape(-1,2).mean(dim=0).reshape(2)
-        if (splitedimg!=splitedimg).all():
-            splitedimg=torch.zeros_like(splitedimg)
+        if self.getmapimg:
+            splitedimg=vec2img(splitedimg,128,6)[0]
+        else:
+            splitedimg = (splitedimg[x0 // 100:(x1 // 100) + 1, y0 // 100:(y1 // 100) + 1]).reshape(-1, 2).mean(
+                dim=0).reshape(2)
+        if (splitedimg != splitedimg).all():
+            splitedimg = torch.zeros_like(splitedimg)
         img = self.transform(img)
-        mapped_box = torch.zeros(1,*self.size)
         # Attention! (C,H,W)
-        obj= self.checkRDD(imgname, (cls, (x0, y0, x1, y1)))
+        obj = self.checkRDD(imgname, (cls, (x0, y0, x1, y1)))
         x0 = int(x0 * self.size[0] / 600)
         y0 = int(y0 * self.size[1] / 600)
         x1 = int(x1 * self.size[0] / 600)
         y1 = int(y1 * self.size[1] / 600)
-        mapped_box[0,x0:x1, y0:y1] = prob
-        #if obj:
+        if self.mappedcls:
+            mapped_box = torch.zeros(1, *self.size)
+            mapped_box[0, x0:x1, y0:y1] = prob
+        else:
+            # TODO BE VARIABLE
+            mapped_box = torch.zeros(6, *self.size)
+            mapped_box[cls, x0:x1, y0:y1] = prob
+        # if obj:
         #    if (splitedimg==splitedimg).all():
         #        self.c.append(splitedimg[1].item())
-        return img, splitedimg, mapped_box, (cls, prob, x0, y0,x1, y1), int(obj),idx
+        return img, splitedimg, mapped_box, (cls, prob, x0, y0, x1, y1), int(obj), idx
 
     def checkRDD(self, path, bbox):
         def calscore(box1, box2):
             cls1, box1 = box1
             cls2, box2 = box2
             if self.param == 'TF':
-                return cal_iou(box1, box2) > self.iouthresh #and cls1==cls2
-            elif self.param=='REG':
-                return (cls1 == cls2)*(cal_iou(box1,box2)>self.reg_iou_thresh)*cal_iou(box1,box2)
+                return cal_iou(box1, box2) > self.iouthresh  # and cls1==cls2
+            elif self.param == 'REG':
+                return (cls1 == cls2) * (cal_iou(box1, box2) > self.reg_iou_thresh) * cal_iou(box1, box2)
+
         bboxes = getbb(base(path), normalize=False)
         scorelist = [calscore(bbox, b) for b in bboxes]
 
         if self.param == 'TF':
-            return False if scorelist==[] else max(scorelist) == True
+            return False if scorelist == [] else max(scorelist) == True
 
 
 def getbb(basename, xmlbase="All/Annotations/", normalize=True):

@@ -2,8 +2,8 @@ import numpy as np
 import csv
 from core import readxml, classname
 from cal_score3 import cal_iou
-
-def precision_recall(csvfilename='01test.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=0.5,test_prob_cut=0,return_str=False):
+import pickle
+def precision_recall(csvfilename='/home/hokusei/src/mydarknet/result.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=0.5,test_prob_cut=0,ret=False):
     detect_dic = {}
     tp = np.zeros(len(classname))
     fp = np.zeros(len(classname))
@@ -59,40 +59,55 @@ def precision_recall(csvfilename='01test.csv', oklist=None, iou_thresh=.5, prob_
 
     precision = (tp / (tp + fp))[:6]
     recall = (tp / (tpfn))[:6]
-    print(f'precision:{precision}')
-    print(f'recall   :{recall}')
-    print(f'f_value  :{2 / (1 / precision + 1 / recall)}')
-    print(f'mean:{np.mean(2 / (1 / precision + 1 / recall))}')
-    if return_str:
-        return f'precision:{precision} recall   :{recall} f_value  :{2 / (1 / precision + 1 / recall)} :mean:{np.mean(2 / (1 / precision + 1 / recall))}\n'
-    return np.mean(2 / (1 / precision + 1 / recall))
+    #print(f'precision:{precision}')
+    #print(f'recall   :{recall}')
+    #print(f'f_value  :{2 / (1 / precision + 1 / recall)}')
+    #print(f'mean:{np.mean(2 / (1 / precision + 1 / recall))}')
+    if ret:
+        return {'precision':precision, 'recall'   :recall, 'f_value'  :(2 / (1 / precision + 1 / recall)), 'mean':(np.mean(2 / (1 / precision + 1 / recall))),'yolo':test_prob_yolo,'cut':test_prob_cut,'out':test_prob_out}
 
-def tester(testcsv,oklist,probthresh):
-    mx=0
-    myolo=0
-    mout=0
-    mcut=0
+def tester(testcsv,oklist,probthresh,resultlist=None):
+    mx={'mean':0}
     for yolo in np.linspace(0.1,0.9,9):
         for out in np.linspace(0.1,0.9,9):
             for cut in np.linspace(0.1,0.9,9):
-                print(f'yolo:{yolo},out:{out},cut:{cut}')
                 now=precision_recall(testcsv, oklist, prob_thresh=probthresh, test_prob_yolo=yolo, test_prob_out=out,
-                                     test_prob_cut=cut)
-                print(now)
-                if mx<now:
+                                     test_prob_cut=cut,ret=True)
+                if resultlist[int(yolo*10)][int(out*10)][int(cut*10)]['mean']<now['mean']:
+                    resultlist[int(yolo * 10)][int(out * 10)][int(cut * 10)]=now
+                    print(f'yolo:{yolo},out:{out},cut:{cut}')
+                    print(now)
+                if mx['mean']<now['mean']:
                     mx=now
-                    myolo=yolo
-                    mout=out
-                    mcut=cut
-            if mx>0.515:
-                with open('congrad.txt','a') as f:
-                    f.write(f'yolo:{yolo},out:{out},cut:{cut}')
-                    f.write(f'{precision_recall(testcsv, oklist, prob_thresh=probthresh, test_prob_yolo=yolo, test_prob_out=out,test_prob_cut=cut,return_str=True)}')
-            if mx>0.52:
-                print('!!!!!!!!!!!!!!!!CONGRATULATION!!!!!!!!!!!!!!!')
-    print(f'max is {mx},yolo:{myolo},out:{mout},cut:{mcut}')
-    precision_recall(csvfilename=testcsv,oklist=oklist,prob_thresh=probthresh,test_prob_yolo=myolo,test_prob_out=mout,test_prob_cut=mcut)
+
+
+    print(mx)
+    with open('resultlist.pkl','wb') as resultlist_f:
+        pickle.dump(resultlist,resultlist_f)
+    return mx
+import csv
+def showresult(resultlistpkl):
+    with open(resultlistpkl,'rb') as f:
+        resultlist=pickle.load(f)
+    resultlist=[i for k in resultlist for j in k for i in j]
+    resultlist=sorted(resultlist,key=lambda x:x['mean'])[::-1]
+
+
+
+class Precison_Recall_Teseter:
+    def __init__(self,testcsv,probthresh):
+        self.testcsv=testcsv
+        self.probthresh=probthresh
+        self.resultlist=[[[{'mean':0} for i in range(10)] for j in range(10)] for k in range(10)]
+        self.maxresult={'mean':0}
+    def precisoin_recall_test(self,oklist):
+        maxinepoch=tester(testcsv=self.testcsv,oklist=oklist,probthresh=self.probthresh,resultlist=self.resultlist)
+        if self.maxresult['mean']<maxinepoch['mean']:
+            self.maxresult=maxinepoch
+        print(self.resultlist)
+        print('')
 
 if __name__ == '__main__':
     precision_recall()
+    #showresult('resultlist.pkl')
 
