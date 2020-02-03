@@ -57,8 +57,8 @@ def precision_recall(csvfilename='/home/hokusei/src/mydarknet/result.csv', oklis
                 tpfn[bb[-1]] += 1
     # if map:cal map here #recall is tp-all(all)
 
-    precision = (tp / (tp + fp))[:6]
-    recall = (tp / (tpfn))[:6]
+    precision = (tp / (tp + fp))[:8]
+    recall = (tp / (tpfn))[:8]
     #print(f'precision:{precision}')
     #print(f'recall   :{recall}')
     #print(f'f_value  :{2 / (1 / precision + 1 / recall)}')

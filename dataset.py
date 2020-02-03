@@ -33,21 +33,21 @@ def file(path):
 
 
 class YOLOOutputDataset(torch.utils.data.Dataset):
-    def __init__(self, base, csvpath, size=(128, 128), numcls=6, iouthresh=.5, crop=True, prob_thresh=0.5, param='TF',mappedcls=False,getmapimg=True):
+    def __init__(self, base, csvpath, size=(128, 128), numcls=8,iouthresh=.5, crop=True, prob_thresh=0.5, param='TF',mappedcls=True,getmapimg=False):
         self.crop = crop
         self.base = base
         self.size = size
         self.iouthresh = iouthresh
-        self.numcls = numcls
         self.param = param
         with open(csvpath) as f:
             csvreader = csv.reader(f)
-            self.yolooutput = [row for row in csvreader if int(row[1]) < 6 and float(row[2]) > prob_thresh]
+            self.yolooutput = [row for row in csvreader if int(row[1]) < 8 and float(row[2]) > prob_thresh]
         self.transform = Compose([Resize(size), ToTensor()])
         self.bicls = Load2cls('patch.pkl')
         self.c = []
         self.mappedcls=mappedcls
         self.getmapimg=getmapimg
+        self.numcls=numcls
 
     def __len__(self):
         return len(self.yolooutput)
@@ -85,7 +85,7 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
             mapped_box[0, x0:x1, y0:y1] = prob
         else:
             # TODO BE VARIABLE
-            mapped_box = torch.zeros(6, *self.size)
+            mapped_box = torch.zeros(self.numcls, *self.size)
             mapped_box[cls, x0:x1, y0:y1] = prob
         # if obj:
         #    if (splitedimg==splitedimg).all():

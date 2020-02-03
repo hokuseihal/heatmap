@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from dataset import getbb, YOLOOutputDataset as dataset
 import os
-from models import ImgPackModel as Model
+from models import ImgPackModel2 as Model
 from core import train, test, SoftmaxFocalLoss
 import numpy as np
 from core import prmap, patchaccf
@@ -17,7 +17,7 @@ def main():
     batchsize = 64
     num_epoch = 100
     model_save_path = 'imgpackmodel.pth'
-    traincsv = 'reversetrain_001.csv'
+    traincsv = '01train67.csv'
     testcsv = '01test.csv'
     #traincsv = '01test.csv'
     probthresh = .01
