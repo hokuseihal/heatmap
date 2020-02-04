@@ -63,24 +63,24 @@ def main():
     #test end
     for e in range(num_epoch):
         ## train
-        #model.train()
-        ## log_interval = len(train_loader)
-        #log_interval = 16
-        #losslist = []
-        #for batch_idx, (img, splittedimg, mappedbox, bbox, objtarget, idx) in enumerate(train_loader):
-        #    img, splittedimg, mappedbox, objtarget = img.to(device), splittedimg.to(device), mappedbox.to(
-        #        device), objtarget.to(device)
-        #    optimizer.zero_grad()
-        #    out_obj = model(img, splittedimg, bbox, mappedbox)
-        #    loss = objlossf(out_obj, objtarget)
-        #    loss.backward()
-        #    optimizer.step()
-        #    writer.add_scalar('Loss:Train', loss.item(), e)
-        #    losslist.append(loss.item())
-        #    if (batch_idx + 1) % log_interval == 0:
-        #        print(f'Train Epoch: {e} [{batch_idx * batchsize}/{len(train_loader.dataset)} ({100.0 * batch_idx / len(train_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
-        #        losslist = []
-        #        # break
+        model.train()
+        # log_interval = len(train_loader)
+        log_interval = 16
+        losslist = []
+        for batch_idx, (img, splittedimg, mappedbox, bbox, objtarget, idx) in enumerate(train_loader):
+            img, splittedimg, mappedbox, objtarget = img.to(device), splittedimg.to(device), mappedbox.to(
+                device), objtarget.to(device)
+            optimizer.zero_grad()
+            out_obj = model(img, splittedimg, bbox, mappedbox)
+            loss = objlossf(out_obj, objtarget)
+            loss.backward()
+            optimizer.step()
+            writer.add_scalar('Loss:Train', loss.item(), e)
+            losslist.append(loss.item())
+            if (batch_idx + 1) % log_interval == 0:
+                print(f'Train Epoch: {e} [{batch_idx * batchsize}/{len(train_loader.dataset)} ({100.0 * batch_idx / len(train_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
+                losslist = []
+                # break
         # test
         correct = 0
         rmap = 0
