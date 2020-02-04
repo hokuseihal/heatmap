@@ -66,7 +66,7 @@ def precision_recall(csvfilename='/home/hokusei/src/mydarknet/result.csv', oklis
     if ret:
         return {'precision':precision, 'recall'   :recall, 'f_value'  :(2 / (1 / precision + 1 / recall)), 'mean':(np.mean(2 / (1 / precision + 1 / recall))),'yolo':test_prob_yolo,'cut':test_prob_cut,'out':test_prob_out}
 
-def tester(testcsv,oklist,probthresh,resultlist=None):
+def tester(testcsv,oklist,probthresh,resultlist):
     mx={'mean':0}
     for yolo in np.linspace(0.1,0.9,9):
         for out in np.linspace(0.1,0.9,9):
@@ -90,8 +90,8 @@ def showresult(resultlistpkl):
     with open(resultlistpkl,'rb') as f:
         resultlist=pickle.load(f)
     resultlist=[i for k in resultlist for j in k for i in j]
-    resultlist=sorted(resultlist,key=lambda x:x['mean'])[::-1]
-
+    resultlist=sorted(resultlist,key=lambda x:x['mean'])
+    #print(resultlist)
 
 
 class Precison_Recall_Teseter:
@@ -108,6 +108,6 @@ class Precison_Recall_Teseter:
         print('')
 
 if __name__ == '__main__':
-    precision_recall()
-    #showresult('resultlist.pkl')
+    #precision_recall()
+    showresult('resultlist.pkl')
 
