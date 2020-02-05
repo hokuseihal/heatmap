@@ -36,12 +36,13 @@ def cal(mat):
     diag = mat.diagonal()
     prediction = diag / preclslist
     recall = diag / realclslist
-    f1 = 2 * (recall + prediction) / (recall + prediction)
+    f1 = 2 * (recall[:6] * prediction[:6]) / (recall[:6] + prediction[:6])
     accuracy = diag.sum() / realclslist.sum()
     print('prediction', prediction)
     print('recall', recall)
     print('accuracy', accuracy)
-    # print('f1',f1)
+    print('f1',f1)
+    print('f1mean',f1.mean())
     return prediction, recall, f1
 
 
@@ -92,18 +93,19 @@ def precision_recall(filename,lookinglist=None):
     fp = 0
     n = 0
     with open(filename) as f:
-        reader = csv.reader(f)
+        reader = csv.reader((line.replace('\0','') for line in f))
 
         for idx,row in enumerate(reader):
+            if float(row[2])<0.3:continue
             if (lookinglist is not None) and (not lookinglist[idx]):
                 continue
             preclslist[int(row[1])] += 1
             for xml in readxml(row):
-                if cal_iou(row, xml) > 0.1:
+                if cal_iou(row, xml) > 0.5:
                     addresult(row, xml, resultmat)
 
     cal(resultmat)
 
 
 if __name__ == '__main__':
-    precision_recall('y2rresult_050.csv')
+    precision_recall('detect_ssd_mobile_test.csv')

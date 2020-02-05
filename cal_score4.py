@@ -7,7 +7,7 @@ from PIL import Image
 
 classes = ["D00", "D01", "D10", "D11", "D20", "D40", "D43", "D44", "D30", "", "", ""]
 valtxtpath = "All/ImageSets/Main/val.txt"
-filename = "y2rresult_050.csv"
+filename = "detect_ssd_mobile_test.csv"
 dataroot = "All/Annotations/"
 labelpath = "All/labels/"
 imagefolder = "All/JPEGImages/"
