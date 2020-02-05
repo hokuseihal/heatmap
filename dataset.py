@@ -54,6 +54,8 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         imgname = ospathcat([self.base, 'JPEGImages', file(self.yolooutput[idx][0])])
+        if not '.jpg' in imgname:
+            imgname+='.jpg'
         cls = int(self.yolooutput[idx][1])
         prob = float(self.yolooutput[idx][2])
         x0 = int(self.yolooutput[idx][3])
