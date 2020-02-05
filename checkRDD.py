@@ -17,8 +17,8 @@ def main():
     batchsize = 64
     num_epoch = 100
     model_save_path = 'imgpackmodel.pth'
-    traincsv = 'detect_ssd_inception_train.csv'
-    testcsv = 'detect_ssd_inception_test.csv'
+    traincsv = 'detect_ssd_mobile_train.csv'
+    testcsv = 'detect_ssd_mobile_test.csv'
     #traincsv = '01test.csv'
     probthresh = .01
     train_dataset = dataset('All/', traincsv, prob_thresh=probthresh)
