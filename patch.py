@@ -151,7 +151,6 @@ def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.1):
                 print(imgname[i//(13*13*5)].split('.')[0], cls[i].item(), score[i].item(), *boxes[i].int().tolist())
                 writer.writerow([imgname[i//(13*13*5)].split('.')[0], cls[i].item(), score[i].item(), *boxes[i].int().tolist()])
 
-test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
 #pretraining for patch binary classification
 mx=0
 for e in range(num_epoch):
@@ -181,11 +180,3 @@ for e in range(num_epoch):
 #    pickle.dump(savedic,f)
 
 
-for e in range(num_epoch):
-    #with open('catyolo.csv','w') as f:
-    #    pass
-    #yolotrain(yolopatchmodel, device, train_ypd_loader, yolocatpatchlossf, yolooptimizer, e)
-    #torch.save(yolopatchmodel.state_dict(), 'yolopatchmodel.pth')
-    #yolotest(yolopatchmodel, device, test_ypd_loader, yolocatpatchlossf, patchaccf, nmswritecsv)
-    #precision_recall()
-    exit()

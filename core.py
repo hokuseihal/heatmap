@@ -166,8 +166,8 @@ def train(model, device, train_loader, lossf, optimizer, epoch, log_interval=1):
                 )
             )
             tloss = 0
-        if batch_idx==3:
-            break
+        #if batch_idx==3:
+        #    break
 def yolotrain(model, device, train_loader, lossf, optimizer, epoch, log_interval=100):
     model.train()
     tloss =[]

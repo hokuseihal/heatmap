@@ -3,7 +3,7 @@ import csv
 from core import readxml, classname
 from cal_score3 import cal_iou
 import pickle
-def precision_recall(csvfilename='01train.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=.5,test_prob_cut=0.5,ret=False):
+def precision_recall(csvfilename='01test67.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=.5,test_prob_cut=0.5,ret=False):
     detect_dic = {}
     tp = np.zeros(len(classname))
     fp = np.zeros(len(classname))
