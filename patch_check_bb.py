@@ -17,7 +17,7 @@ def check_bb(patchmodel,device):
         lines= [line.strip().split(' ') for line in lines]
         for line in lines:
             yolodic[line[0]]=list(map(float,line[1:]))
-    with open('/home/hokusei/src/mydarknet/test.txt') as f:
+    with open('test.txt') as f:
         lines=f.readlines()
     for line in lines:
         result=[]
