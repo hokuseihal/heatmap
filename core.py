@@ -193,13 +193,10 @@ def test(model, device, test_loader, lossf, accf, prf):
     test_loss = 0
     correct = 0
     rmap = 0
-    tmp=[]
     with torch.no_grad():
         for idx,(data, target) in enumerate(test_loader):
             data, target = data.to(device, dtype=torch.float32), target.to(device).reshape(-1)
-            t=time.time()
             output = model(data)
-            tmp.append(time.time()-t)
             # sum up batch loss
             test_loss += lossf(output, target)
             # get the index of the max log-probability
@@ -221,7 +218,6 @@ def test(model, device, test_loader, lossf, accf, prf):
     print(f'precision:{rmap.diag() / rmap.sum(dim=-1)}\nrecall:{rmap.diag() / rmap.sum(dim=0)}\n\n')
     if (rmap.diag() / rmap.sum(dim=-1))[1]>0.68 and (rmap.diag() / rmap.sum(dim=0))[1]>0.68:
         exit(0)
-    print(np.mean(tmp))
 
 def yolotest(model, device, test_loader, lossf, accf, prf):
     model=model.to(device)

@@ -6,7 +6,7 @@ from torchvision import models
 from core import yolotrain, yolotest, train, test, SoftmaxFocalLoss,  FocalLoss
 from dataset import YOLOcatPatchDataset as YPD
 from dataset import PatchDataset as PD
-
+from patch_check_bb import check_bb
 import os
 
 
@@ -60,17 +60,17 @@ batchsize = 72
 num_epoch = 252
 cls = 2
 # rdpd = RDPD(rddbase="All/", patchbase="rdd_patch/", split=(6, 6))
-#rdpd = PD('rdd_patch/')
-#train_rdd, test_rdd = torch.utils.data.random_split(
-#    rdpd, [int(len(rdpd) * 0.7), len(rdpd) - int(len(rdpd) * 0.7)]
-#)
-#
-#train_rdpd_loader = torch.utils.data.DataLoader(
-#    train_rdd, batch_size=batchsize, shuffle=True
-#)
-#test_rdpd_loader = torch.utils.data.DataLoader(
-#    test_rdd, batch_size=1, shuffle=True
-#)
+rdpd = PD('rdd_patch/')
+train_rdd, test_rdd = torch.utils.data.random_split(
+    rdpd, [int(len(rdpd) * 0.7), len(rdpd) - int(len(rdpd) * 0.7)]
+)
+
+train_rdpd_loader = torch.utils.data.DataLoader(
+    train_rdd, batch_size=batchsize, shuffle=True
+)
+test_rdpd_loader = torch.utils.data.DataLoader(
+    test_rdd, batch_size=1, shuffle=True
+)
 #train_ypd = YPD('All/', 'pickle.pkl','All/ImageSets/Main/train.txt')
 #test_ypd=YPD('All/', 'pickle.pkl','All/ImageSets/Main/val.txt')
 #train_ypd_loader = torch.utils.data.DataLoader(
@@ -151,29 +151,34 @@ def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.1):
                 print(imgname[i//(13*13*5)].split('.')[0], cls[i].item(), score[i].item(), *boxes[i].int().tolist())
                 writer.writerow([imgname[i//(13*13*5)].split('.')[0], cls[i].item(), score[i].item(), *boxes[i].int().tolist()])
 
-#test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
-##pretraining for patch binary classification
-# for e in range(num_epoch):
-#   train(patchmodel, device, train_rdpd_loader, patchlossf, optimizer, e)
-#   test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
-#   torch.save(patchmodel.state_dict(), 'patchmodel.pth')
-savedic={}
-from loadimg import  loadimgsp
-import pickle
-txt='/home/hokusei/src/mydarknet/all.txt'
-with open(txt) as f:
-    lines=[i.strip() for i in f.readlines()]
-for l in lines:
-    img=loadimgsp(l)
-    img=img.to(device)
-    patchmodel.eval()
-    with torch.no_grad():
-        out=patchmodel(img)
-    out=out.view(6,6,2)
-    out=torch.softmax(out,dim=-1)
-    savedic[l]=out
-with open('patch.pkl','wb') as f:
-    pickle.dump(savedic,f)
+test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
+#pretraining for patch binary classification
+mx=0
+for e in range(num_epoch):
+    train(patchmodel, device, train_rdpd_loader, patchlossf, optimizer, e)
+    test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
+    r=check_bb(patchmodel,device)
+    print('recall',r)
+    if mx<r:
+        print('BIGGER!!!\n',mx)
+        torch.save(patchmodel.state_dict(), 'patchmodel.pth')
+#savedic={}
+#from loadimg import  loadimgsp
+#import pickle
+#txt='/home/hokusei/src/mydarknet/all.txt'
+#with open(txt) as f:
+#    lines=[i.strip() for i in f.readlines()]
+#for l in lines:
+#    img=loadimgsp(l)
+#    img=img.to(device)
+#    patchmodel.eval()
+#    with torch.no_grad():
+#        out=patchmodel(img)
+#    out=out.view(6,6,2)
+#    out=torch.softmax(out,dim=-1)
+#    savedic[l]=out
+#with open('patch.pkl','wb') as f:
+#    pickle.dump(savedic,f)
 
 
 for e in range(num_epoch):

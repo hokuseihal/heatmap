@@ -145,7 +145,7 @@ def getbb(basename, xmlbase="All/Annotations/", normalize=True):
             bb.append((cls, b))
         return bb
 
-
+'''
 class PatchDataset(torch.utils.data.Dataset):
     def __init__(self, base, rddbase='All/', in_transform=None, split=(6, 6)):
         self.transform = (
@@ -226,7 +226,7 @@ class PatchDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         impath, label = self.imagelist[idx]
         return self.transform(Image.open(impath)), label
-'''
+
 
 # RDD dataset
 classes = ["D00", "D01", "D10", "D11", "D20", "D40", "D43", "D44", "D30"]
