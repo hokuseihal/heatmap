@@ -159,6 +159,7 @@ for e in range(num_epoch):
     r=check_bb(patchmodel,device)
     print('recall',r)
     if mx<r:
+        mx=r
         print('BIGGER!!!\n',mx)
         torch.save(patchmodel.state_dict(), 'patchmodel.pth')
 #savedic={}
