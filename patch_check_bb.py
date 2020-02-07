@@ -52,5 +52,6 @@ def check_bb(patchmodel,device):
         assert len(yolodic[line])==len(result)
         for i in range(len(result)):
             ben_y2[int(yolodic[line][i]),int(result[i])]+=1
+    print(ben_y2)
     print()
     return tp/(tp+fp)
