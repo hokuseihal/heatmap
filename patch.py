@@ -88,11 +88,11 @@ if os.path.exists('patchmodel.pth'):
     patchmodel.load_state_dict(torch.load('patchmodel.pth'))
     print('load patch weight')
 yolopatchmodel = YoloPatchmodel(cls).to(device)
-if os.path.exists('yolopatchmodel.pth'):
-    yolopatchmodel.load_state_dict(torch.load('yolopatchmodel.pth'))
-    print('load yolo weight')
+#if os.path.exists('yolopatchmodel.pth'):
+#    yolopatchmodel.load_state_dict(torch.load('yolopatchmodel.pth'))
+#    print('load yolo weight')
 optimizer = torch.optim.Adam(patchmodel.parameters())
-yolooptimizer=torch.optim.Adam(yolopatchmodel.parameters())
+#yolooptimizer=torch.optim.Adam(yolopatchmodel.parameters())
 patchlossf = SoftmaxFocalLoss(gammma=2)
 yolocatpatchlossf = FocalLoss()
 
