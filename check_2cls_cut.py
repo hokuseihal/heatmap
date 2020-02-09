@@ -10,7 +10,7 @@ def check_2cls_cut(model,device,csvname='01test.csv',thresh=0.5):
     with open(csvname) as f:
         lines=[i for i in  csv.reader((line.replace('\0','') for line in f) ) if 0.01<float(i[2])<0.5]
 
-    for detect in lines[:200]:
+    for detect in lines:
         imgpath,cls,prob,x0,y0,x1,y1=detect
         cls, prob, x0, y0, x1, y1=float(cls),float(prob),float(x0),float(y0),float(x1),float(y1)
         label=int(checkRDD(imgpath,(cls,(x0,y0,x1,y1))))
