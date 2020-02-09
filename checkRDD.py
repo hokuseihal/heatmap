@@ -11,14 +11,14 @@ from torch.utils.tensorboard import SummaryWriter
 from cal_score5 import precision_recall, tester
 import time
 from cal_score5 import Precison_Recall_Teseter as PRT
-
+import pickle
 def main():
     writer = SummaryWriter()
     batchsize = 64
     num_epoch = 100
     model_save_path = 'imgpackmodel.pth'
-    traincsv = 'detect_ssd_mobile_train.csv'
-    testcsv = 'detect_ssd_mobile_test.csv'
+    traincsv = 'reversetrain.csv'
+    testcsv = '01test.csv'
     #traincsv = '01test.csv'
     probthresh = .01
     train_dataset = dataset('All/', traincsv, prob_thresh=probthresh)
@@ -100,8 +100,12 @@ def main():
                 correct += patchaccf(objtarget, pred)
                 rmap += prmap(objtarget, out_obj)
                 oklist[idx] = (out_obj[:,1]).detach().cpu().numpy()
-
-        prtester.precisoin_recall_test(oklist=oklist)
+        with open('oklist.pkl','wb') as fw:
+            pickle.dump(oklist,fw)
+        with open('oklist.pkl','rb') as fl:
+            oklist=pickle.load(fl)
+        precision_recall(oklist=oklist,test_prob_yolo=5,test_prob_out=5,test_prob_cut=0.01)
+        #prtester.precisoin_recall_test(oklist=oklist)
         print(f'Test Epoch: {e} [{batch_idx}/{len(test_loader)} ({100.0 * batch_idx / len(test_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
         print(f'precision:{rmap.diag() / rmap.sum(dim=0)}\nrecall:{rmap.diag() / rmap.sum(dim=-1)}')
         # exit(1)

@@ -279,7 +279,42 @@ def xml2clsconf(path, split):
 
     except FileNotFoundError:
         print(f'{path} is not Found')
-from dataset import base,getbb
+def base(path):
+    return path.split('/')[-1].split('.')[0]
+def getbb(basename, xmlbase="All/Annotations/", normalize=True):
+    bb = []
+    with open(xmlbase + basename + ".xml") as in_file:
+        tree = ET.parse(in_file)
+        root = tree.getroot()
+        size = root.find("size")
+        w = int(size.find("width").text)
+        h = int(size.find("height").text)
+        t = list(root.iter("object"))
+        if len(t) == 0:
+            return []
+        #    pass
+        for obj in root.iter("object"):
+            xmlbox = obj.find("bndbox")
+            b = (
+                float(xmlbox.find("xmin").text) / w,
+                float(xmlbox.find("ymin").text) / h,
+                float(xmlbox.find("xmax").text) / w,
+                float(xmlbox.find("ymax").text) / h,
+            )
+            if normalize:
+                pass
+
+            else:
+
+                b = (
+                    float(xmlbox.find("xmin").text),
+                    float(xmlbox.find("ymin").text),
+                    float(xmlbox.find("xmax").text),
+                    float(xmlbox.find("ymax").text),
+                )
+            cls = classes.index(obj.find("name").text)
+            bb.append((cls, b))
+        return bb
 def checkRDD(path, bbox,param='TF',iouthresh=0.5):
     def calscore(box1, box2):
         cls1, box1 = box1
