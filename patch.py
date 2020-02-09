@@ -1,17 +1,13 @@
+import os
+
 import torch
 import torch.nn.functional as F
 from torch import nn
-from torchvision import models
 
-from core import yolotrain, yolotest, train, test, SoftmaxFocalLoss,  FocalLoss
-from dataset import YOLOcatPatchDataset as YPD
+from core import train, test, SoftmaxFocalLoss, FocalLoss
 from dataset import PatchDataset as PD
-from patch_check_bb import check_bb
-import os
-
-
 from models import PatchModel
-
+from check_2cls_cut import check_2cls_cut
 
 class YoloPatchmodel(nn.Module):
     def __init__(self, cls):
@@ -48,15 +44,15 @@ class YoloPatchmodel(nn.Module):
         x = self.cnn5(x)
         x = F.relu(x)
         x = self.cnn6(x)
-        x=F.relu(x)
+        x = F.relu(x)
         x = x.permute(0, 3, 2, 1)
         x = x.view(-1, 13, 13, 7)
-        #x = torch.sigmoid(x)
+        # x = torch.sigmoid(x)
         return x
 
 
 # load data
-batchsize = 72
+batchsize = 128
 num_epoch = 252
 cls = 2
 # rdpd = RDPD(rddbase="All/", patchbase="rdd_patch/", split=(6, 6))
@@ -71,31 +67,30 @@ train_rdpd_loader = torch.utils.data.DataLoader(
 test_rdpd_loader = torch.utils.data.DataLoader(
     test_rdd, batch_size=1, shuffle=True
 )
-#train_ypd = YPD('All/', 'pickle.pkl','All/ImageSets/Main/train.txt')
-#test_ypd=YPD('All/', 'pickle.pkl','All/ImageSets/Main/val.txt')
-#train_ypd_loader = torch.utils.data.DataLoader(
+# train_ypd = YPD('All/', 'pickle.pkl','All/ImageSets/Main/train.txt')
+# test_ypd=YPD('All/', 'pickle.pkl','All/ImageSets/Main/val.txt')
+# train_ypd_loader = torch.utils.data.DataLoader(
 #    train_ypd, batch_size=4, shuffle=True
-#)
-#test_ypd_loader = torch.utils.data.DataLoader(
+# )
+# test_ypd_loader = torch.utils.data.DataLoader(
 #    test_ypd, batch_size=1, shuffle=True
-#)
+# )
 # finetuning
 device = "cuda" if torch.cuda.is_available() else "cpu"
-#device='cpu'
+# device='cpu'
 print(device)
 patchmodel = PatchModel(cls).to(device)
 if os.path.exists('patchmodel.pth'):
     patchmodel.load_state_dict(torch.load('patchmodel.pth'))
     print('load patch weight')
 yolopatchmodel = YoloPatchmodel(cls).to(device)
-#if os.path.exists('yolopatchmodel.pth'):
+# if os.path.exists('yolopatchmodel.pth'):
 #    yolopatchmodel.load_state_dict(torch.load('yolopatchmodel.pth'))
 #    print('load yolo weight')
 optimizer = torch.optim.Adam(patchmodel.parameters())
-#yolooptimizer=torch.optim.Adam(yolopatchmodel.parameters())
+# yolooptimizer=torch.optim.Adam(yolopatchmodel.parameters())
 patchlossf = SoftmaxFocalLoss(gammma=2)
 yolocatpatchlossf = FocalLoss()
-
 
 from core import patchaccf
 
@@ -115,17 +110,17 @@ def rdcaccf(target, pred, limit=0.5):
         ]
     )
 
-from core import prmap
 
+from core import prmap
 
 from core import readanchors
 from torchvision.ops import nms
 import csv
 
-from cal_score3 import precision_recall
+
 def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.1):
     print(imgname)
-    boxes = torch.cat([xy * 600, wh * torch.from_numpy(readanchors())*600/13], dim=-1)
+    boxes = torch.cat([xy * 600, wh * torch.from_numpy(readanchors()) * 600 / 13], dim=-1)
     # convert (x,y,w,h) -> (x0,y0,x1,y1)
     x0 = boxes[:, :, :, :, :, 0] - boxes[:, :, :, :, :, 2] / 2
     y0 = boxes[:, :, :, :, :, 1] - boxes[:, :, :, :, :, 3] / 2
@@ -136,39 +131,42 @@ def nmswritecsv(xy, wh, clsconf, imgname, thresh=0.1):
     x1 = x1.view(*x1.shape, 1)
     y1 = y1.view(*y1.shape, 1)
     boxes = torch.cat([x0, y0, x1, y1], dim=-1)
-    clsconf=clsconf.view(clsconf.shape[0],13,13,1,7)
-    clsconf=torch.ones((clsconf.shape[0],13,13,5,7)).to(device)*clsconf
-    score ,cls= clsconf[:, :, :, :,:-1].max(dim=-1)
-    score*=clsconf[:,:,:,:,-1]
-    boxes=boxes.view(-1, 4)
-    score=score.view(-1)
-    cls=cls.view(-1,1)
+    clsconf = clsconf.view(clsconf.shape[0], 13, 13, 1, 7)
+    clsconf = torch.ones((clsconf.shape[0], 13, 13, 5, 7)).to(device) * clsconf
+    score, cls = clsconf[:, :, :, :, :-1].max(dim=-1)
+    score *= clsconf[:, :, :, :, -1]
+    boxes = boxes.view(-1, 4)
+    score = score.view(-1)
+    cls = cls.view(-1, 1)
     ids = nms(boxes.cpu(), score.cpu(), 0.5)
     with open('catyolo.csv', 'a') as f:
         writer = csv.writer(f)
         for i in ids:
             if score[i] > thresh:
-                print(imgname[i//(13*13*5)].split('.')[0], cls[i].item(), score[i].item(), *boxes[i].int().tolist())
-                writer.writerow([imgname[i//(13*13*5)].split('.')[0], cls[i].item(), score[i].item(), *boxes[i].int().tolist()])
+                print(imgname[i // (13 * 13 * 5)].split('.')[0], cls[i].item(), score[i].item(),
+                      *boxes[i].int().tolist())
+                writer.writerow([imgname[i // (13 * 13 * 5)].split('.')[0], cls[i].item(), score[i].item(),
+                                 *boxes[i].int().tolist()])
 
-#pretraining for patch binary classification
-mx=0
+
+# pretraining for patch binary classification
+mx = 0
 for e in range(num_epoch):
     train(patchmodel, device, train_rdpd_loader, patchlossf, optimizer, e)
     test(patchmodel, device, test_rdpd_loader, patchlossf, patchaccf, prmap)
-    r=check_bb(patchmodel,device)
+    r=check_2cls_cut(patchmodel,device)
     print('recall',r)
     if mx<r:
-        mx=r
-        print('BIGGER!!!\n',mx)
-        torch.save(patchmodel.state_dict(), 'patchmodel.pth')
-#savedic={}
-#from loadimg import  loadimgsp
-#import pickle
-#txt='/home/hokusei/src/mydarknet/all.txt'
-#with open(txt) as f:
+       mx=r
+       print('BIGGER!!!\n',mx)
+       torch.save(patchmodel.state_dict(), 'patchmodel.pth')
+# savedic={}
+# from loadimg import  loadimgsp
+# import pickle
+# txt='/home/hokusei/src/mydarknet/all.txt'
+# with open(txt) as f:
 #    lines=[i.strip() for i in f.readlines()]
-#for l in lines:
+# for l in lines:
 #    img=loadimgsp(l)
 #    img=img.to(device)
 #    patchmodel.eval()
@@ -177,7 +175,5 @@ for e in range(num_epoch):
 #    out=out.view(6,6,2)
 #    out=torch.softmax(out,dim=-1)
 #    savedic[l]=out
-#with open('patch.pkl','wb') as f:
+# with open('patch.pkl','wb') as f:
 #    pickle.dump(savedic,f)
-
-

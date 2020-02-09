@@ -38,7 +38,7 @@ def cal_iou(r, x):
         return 0
 
     A = (x[2] - x[0]) * (x[3] - x[1])
-    B = (r[2] - r[0]) * (r[6] - r[1])
+    B = (r[2] - r[0]) * (r[3] - r[1])
     C = (min(r[2], x[2]) - max(r[0], x[0])) * (min(r[3], x[3]) - max(r[1], x[1]))
     iou = C / (A + B - C)
     return iou
@@ -210,8 +210,8 @@ def test(model, device, test_loader, lossf, accf, prf):
         "Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)".format(
             test_loss / len(test_loader),
             correct,
-            len(test_loader) * 72,
-            100.0 * correct / (len(test_loader) * 72),
+            len(test_loader.dataset),
+            100.0 * correct / (len(test_loader.dataset)),
         )
     )
 
@@ -279,3 +279,14 @@ def xml2clsconf(path, split):
 
     except FileNotFoundError:
         print(f'{path} is not Found')
+from dataset import base,getbb
+def checkRDD(path, bbox,param='TF',iouthresh=0.5):
+    def calscore(box1, box2):
+        cls1, box1 = box1
+        cls2, box2 = box2
+        if param == 'TF':
+            return cal_iou(box1, box2) > iouthresh  # and cls1==cls2
+    bboxes = getbb(base(path), normalize=False)
+    scorelist = [calscore(bbox, b) for b in bboxes]
+    if param == 'TF':
+        return False if scorelist == [] else max(scorelist) == True

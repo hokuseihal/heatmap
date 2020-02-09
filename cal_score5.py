@@ -3,7 +3,7 @@ import csv
 from core import readxml, classname
 from cal_score3 import cal_iou
 import pickle
-def precision_recall(csvfilename='01test67.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=.5,test_prob_cut=0.5,ret=False):
+def precision_recall(csvfilename='01test.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=.5,test_prob_cut=0.5,ret=False):
     detect_dic = {}
     tp = np.zeros(len(classname))
     fp = np.zeros(len(classname))
@@ -40,7 +40,7 @@ def precision_recall(csvfilename='01test67.csv', oklist=None, iou_thresh=.5, pro
                     else:
                         detections_on_img_id[det_idx] = -1
                         # if map : add dets if id==1
-        print(detectfilename,*ground_truth_on_img_id)
+        #print(detectfilename,*ground_truth_on_img_id)
         _tp = np.eye(len(classname))[detections_on_img_id_cls][detections_on_img_id == 1].sum(axis=0)
         _fp = np.eye(len(classname))[detections_on_img_id_cls][detections_on_img_id == 0].sum(axis=0)
         # _tpfn = np.eye(len(classname))[ground_truth_on_img_id_cls].sum(axis=0)
@@ -60,10 +60,10 @@ def precision_recall(csvfilename='01test67.csv', oklist=None, iou_thresh=.5, pro
 
     precision = (tp / (tp + fp))[:6]
     recall = (tp / (tpfn))[:6]
-    #print(f'precision:{precision}')
-    #print(f'recall   :{recall}')
-    #print(f'f_value  :{2 / (1 / precision + 1 / recall)}')
-    #print(f'mean:{np.mean(2 / (1 / precision + 1 / recall))}')
+    print(f'precision:{precision}')
+    print(f'recall   :{recall}')
+    print(f'f_value  :{2 / (1 / precision + 1 / recall)}')
+    print(f'mean:{np.mean(2 / (1 / precision + 1 / recall))}')
     if ret:
         return {'precision':precision, 'recall'   :recall, 'f_value'  :(2 / (1 / precision + 1 / recall)), 'mean':(np.mean(2 / (1 / precision + 1 / recall))),'yolo':test_prob_yolo,'cut':test_prob_cut,'out':test_prob_out}
 

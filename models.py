@@ -11,7 +11,7 @@ class ConvBNReLU(nn.Sequential):
         super(ConvBNReLU, self).__init__(
             nn.Conv2d(in_planes, out_planes, kernel_size, stride, groups=groups),
             nn.BatchNorm2d(out_planes),
-            nn.Dropout2d(0.25),
+            nn.Dropout2d(0.5),
             nn.ReLU()
         )
 
@@ -82,7 +82,7 @@ class ImgPackModel(nn.Module):
 class PatchModel(nn.Module):
     def __init__(self, cls):
         super(PatchModel, self).__init__()
-        self.cnn = mobilenet_v2(pretrained=False)
+        self.cnn = mobilenet_v2(pretrained=False,num_classes=2)
         self.fc1 = nn.Linear(1000, 256)
         self.fc2 = nn.Linear(256, 16)
         self.fc3 = nn.Linear(16, cls)
@@ -91,12 +91,12 @@ class PatchModel(nn.Module):
         s = x.shape
         x = x.reshape(-1, *s[-3:])
         x = self.cnn(x)
-        x = F.relu(x)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.fc2(x)
-        x = F.relu(x)
-        x = self.fc3(x)
+        #x = F.relu(x)
+        #x = self.fc1(x)
+        #x = F.relu(x)
+        #x = self.fc2(x)
+        #x = F.relu(x)
+        #x = self.fc3(x)
         # x = x.view(*s[:2], 2)
         return x
 
