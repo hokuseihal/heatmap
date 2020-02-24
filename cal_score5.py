@@ -3,15 +3,19 @@ import csv
 from core import readxml, classname
 from cal_score3 import cal_iou
 import pickle
-def precision_recall(csvfilename='01test.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=.5,test_prob_cut=0.5,ret=False):
+object_detection_api=True
+def precision_recall(csvfilename='/home/hokusei/src/RoadDamageDetector/mobilenet_add_test.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=.5,test_prob_cut=0.5,ret=False):
     detect_dic = {}
     tp = np.zeros(len(classname))
     fp = np.zeros(len(classname))
     tpfn = np.zeros(len(classname))
+    use_oklist=[[],[]]
     with open(csvfilename,'r') as f:
         reader = csv.reader((line.replace('\0','') for line in f) )
         lines=[i for i in reader if float(i[2])>prob_thresh]
         for idx, csv_detect_row in enumerate(lines):
+            if oklist is not None:
+                use_oklist[0].append(oklist[idx])
             if (oklist is None or oklist[idx]>test_prob_out or float(csv_detect_row[2])>test_prob_yolo) and float(csv_detect_row[2])>test_prob_cut:
                 detect_dic.setdefault(csv_detect_row[0], []).append(csv_detect_row)
             else:
@@ -29,7 +33,7 @@ def precision_recall(csvfilename='01test.csv', oklist=None, iou_thresh=.5, prob_
                 continue
             for gtb_idx, gtb in enumerate(groundtruth_on_img):
 
-                det_cls = int(det[1])
+                det_cls = int(det[1]) if not object_detection_api else int(det[1])-1
                 gt_cls = gtb[-1]
                 detections_on_img_id_cls[det_idx] = det_cls
                 ground_truth_on_img_id_cls[gtb_idx] = gt_cls
@@ -58,8 +62,8 @@ def precision_recall(csvfilename='01test.csv', oklist=None, iou_thresh=.5, prob_
                 tpfn[bb[-1]] += 1
     # if map:cal map here #recall is tp-all(all)
 
-    precision = (tp / (tp + fp))[:6]
-    recall = (tp / (tpfn))[:6]
+    precision = (tp / (tp + fp))[:8]
+    recall = (tp / (tpfn))[:8]
     print(f'precision:{precision}')
     print(f'recall   :{recall}')
     print(f'f_value  :{2 / (1 / precision + 1 / recall)}')
@@ -92,7 +96,7 @@ def showresult(resultlistpkl):
         resultlist=pickle.load(f)
     resultlist=[i for k in resultlist for j in k for i in j]
     resultlist=sorted(resultlist,key=lambda x:x['mean'])
-    #print(resultlist)
+    print(resultlist)
 
 
 class Precison_Recall_Teseter:
