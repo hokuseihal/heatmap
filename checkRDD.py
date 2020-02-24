@@ -17,8 +17,8 @@ def main():
     batchsize = 64
     num_epoch = 100
     model_save_path = 'imgpackmodel.pth'
-    traincsv = 'reversetrain.csv'
-    testcsv = '01test.csv'
+    traincsv = 'inception_normal_train.csv'
+    testcsv = 'inception_normal_test.csv'
     #traincsv = '01test.csv'
     probthresh = .1
     train_dataset = dataset('All/', traincsv, prob_thresh=probthresh)
@@ -104,8 +104,8 @@ def main():
             pickle.dump(oklist,fw)
         with open('oklist.pkl','rb') as fl:
             oklist=pickle.load(fl)
-        #precision_recall(oklist=oklist,test_prob_yolo=5,test_prob_out=5,test_prob_cut=0.01)
-        #prtester.precisoin_recall_test(oklist=oklist)
+        #precision_recall(oklist=oklist,test_prob_yolo=5,test_prob_out=5,test_prob_cut=0.1)
+        prtester.precisoin_recall_test(oklist=oklist)
         print(f'Test Epoch: {e} [{batch_idx}/{len(test_loader)} ({100.0 * batch_idx / len(test_loader):.0f}%)]\tLoss: {np.mean(losslist):.6f}')
         print(f'precision:{rmap.diag() / rmap.sum(dim=0)}\nrecall:{rmap.diag() / rmap.sum(dim=-1)}')
         # exit(1)

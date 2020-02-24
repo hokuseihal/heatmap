@@ -53,10 +53,11 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
         return len(self.yolooutput)
 
     def __getitem__(self, idx):
-        imgname = ospathcat([self.base, 'JPEGImages', file(self.yolooutput[idx][0])])
+        imgname = ospathcat([self.base, 'JPEGImages', file(self.yolooutput[idx][0].strip())])
         if not '.jpg' in imgname:
             imgname+='.jpg'
-        cls = int(self.yolooutput[idx][1])
+        objecet_detection_api=True
+        cls = int(self.yolooutput[idx][1]) if not objecet_detection_api else int(self.yolooutput[idx][1])-1
         prob = float(self.yolooutput[idx][2])
         x0 = int(self.yolooutput[idx][3])
         y0 = int(self.yolooutput[idx][4])
@@ -99,7 +100,7 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
             cls1, box1 = box1
             cls2, box2 = box2
             if self.param == 'TF':
-                return cal_iou(box1, box2) > self.iouthresh  # and cls1==cls2
+                return cls1==cls2 and cal_iou(box1, box2) > self.iouthresh  # and cls1==cls2
             elif self.param == 'REG':
                 return (cls1 == cls2) * (cal_iou(box1, box2) > self.reg_iou_thresh) * cal_iou(box1, box2)
 
