@@ -12,10 +12,8 @@ def precision_recall(csvfilename='mobilenet_normal_test.csv', oklist=None, iou_t
     use_oklist=[[],[]]
     with open(csvfilename,'r') as f:
         reader = csv.reader((line.replace('\0','') for line in f) )
-        lines=[i for i in reader if float(i[2])>prob_thresh]
+        lines=[row for row in reader if int(row[1]) < 6 and float(row[2]) > prob_thresh]
         for idx, csv_detect_row in enumerate(lines):
-            if oklist is not None:
-                use_oklist[0].append(oklist[idx])
             if (oklist is None or oklist[idx]>test_prob_out or float(csv_detect_row[2])>test_prob_yolo) and float(csv_detect_row[2])>test_prob_cut:
                 detect_dic.setdefault(csv_detect_row[0], []).append(csv_detect_row)
             else:

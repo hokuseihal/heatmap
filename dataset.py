@@ -41,7 +41,7 @@ class YOLOOutputDataset(torch.utils.data.Dataset):
         self.param = param
         with open(csvpath) as f:
             csvreader = csv.reader(f)
-            self.yolooutput = [row for row in csvreader if int(row[1]) < 8 and float(row[2]) > prob_thresh]
+            self.yolooutput = [row for row in csvreader if int(row[1]) < 6 and float(row[2]) > prob_thresh]
         self.transform = Compose([Resize(size), ToTensor()])
         self.bicls = Load2cls('patch.pkl')
         self.c = []
