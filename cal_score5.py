@@ -4,7 +4,7 @@ from core import readxml, classname
 from cal_score3 import cal_iou
 import pickle
 object_detection_api=True
-def precision_recall(csvfilename='/home/hokusei/src/RoadDamageDetector/mobilenet_add_test.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=.5,test_prob_cut=0.5,ret=False):
+def precision_recall(csvfilename='mobilenet_normal_test.csv', oklist=None, iou_thresh=.5, prob_thresh=.5,test_prob_yolo=0.5,test_prob_out=.5,test_prob_cut=0.5,ret=False):
     detect_dic = {}
     tp = np.zeros(len(classname))
     fp = np.zeros(len(classname))
